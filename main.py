@@ -76,7 +76,7 @@ class AgentConfig(BaseModel):
     use_vision: bool = True
     max_actions_per_step: int = 5
     tool_calling_method: str = "function_calling"
-    chrome_cdp: Optional[str] = os.getenv("CHROME_CDP", None)  # Use environment value if exists
+    chrome_cdp: Optional[str] = os.getenv("CHROME_CDP", "http://localhost:9222")  # Use environment value if exists
 
 class ResearchConfig(BaseModel):
     research_task: str = "Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects."
@@ -91,7 +91,7 @@ class ResearchConfig(BaseModel):
     use_vision: bool = True
     use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     headless: bool = True
-    chrome_cdp: Optional[str] = os.getenv("CHROME_CDP", None)  # Use environment value if exists
+    chrome_cdp: Optional[str] = os.getenv("CHROME_CDP", "http://localhost:9222")  # Use environment value if exists
 
 # Helper functions (ported from original code)
 def resolve_sensitive_env_variables(text):
