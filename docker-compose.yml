@@ -1,66 +1,66 @@
 services:
-  browser-use-webui:
-    platform: linux/amd64
-    build:
-      context: .
-      dockerfile: ${DOCKERFILE:-Dockerfile}
-      args:
-        TARGETPLATFORM: ${TARGETPLATFORM:-linux/amd64}
-    ports:
-      - "6080:6080"  # noVNC web interface
-      - "5901:5901"  # VNC port
-      - "9222:9222"  # Chrome remote debugging port
-      - "8000:8000"  # FastAPI WebSocket port
-    environment:
-      - OPENAI_ENDPOINT=${OPENAI_ENDPOINT:-https://api.openai.com/v1}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
-      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
-      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
-      - DEEPSEEK_ENDPOINT=${DEEPSEEK_ENDPOINT:-https://api.deepseek.com}
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
-      - BROWSER_USE_LOGGING_LEVEL=${BROWSER_USE_LOGGING_LEVEL:-info}
-      - MONGODB_URI=mongodb://admin:password123@mongodb:27017
-      - MONGODB_DATABASE=browseruse
-      - ANONYMIZED_TELEMETRY=false
-      - CHROME_PATH=/usr/bin/google-chrome
-      - CHROME_USER_DATA=/app/data/chrome_data
-      - CHROME_PERSISTENT_SESSION=${CHROME_PERSISTENT_SESSION:-false}
-      - DISPLAY=:99
-      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-      - RESOLUTION=${RESOLUTION:-1920x1080x24}
-      - RESOLUTION_WIDTH=${RESOLUTION_WIDTH:-1920}
-      - RESOLUTION_HEIGHT=${RESOLUTION_HEIGHT:-1080}
-      - VNC_PASSWORD=${VNC_PASSWORD:-vncpassword}
-      - CHROME_DEBUGGING_PORT=9222
-      - CHROME_DEBUGGING_HOST=localhost
-      - DBUS_STARTER_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
-      - DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
-    volumes:
-      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - ./tmp:/app/tmp  # For saving recordings, traces, and agent history
-    restart: unless-stopped
-    shm_size: '2gb'
-    cap_add:
-      - SYS_ADMIN
-    security_opt:
-      - seccomp=unconfined
-      - apparmor=unconfined
-    tmpfs:
-      - /tmp
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "5901"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    depends_on:
-      - mongodb
+  # browser-use-webui:
+  #   platform: linux/amd64
+  #   build:
+  #     context: .
+  #     dockerfile: ${DOCKERFILE:-Dockerfile}
+  #     args:
+  #       TARGETPLATFORM: ${TARGETPLATFORM:-linux/amd64}
+  #   ports:
+  #     - "6080:6080"  # noVNC web interface
+  #     - "5901:5901"  # VNC port
+  #     - "9222:9222"  # Chrome remote debugging port
+  #     - "8000:8000"  # FastAPI WebSocket port
+  #   environment:
+  #     - OPENAI_ENDPOINT=${OPENAI_ENDPOINT:-https://api.openai.com/v1}
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+  #     - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+  #     - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+  #     - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+  #     - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+  #     - DEEPSEEK_ENDPOINT=${DEEPSEEK_ENDPOINT:-https://api.deepseek.com}
+  #     - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+  #     - BROWSER_USE_LOGGING_LEVEL=${BROWSER_USE_LOGGING_LEVEL:-info}
+  #     - MONGODB_URI=mongodb://admin:password123@mongodb:27017
+  #     - MONGODB_DATABASE=browseruse
+  #     - ANONYMIZED_TELEMETRY=false
+  #     - CHROME_PATH=/usr/bin/google-chrome
+  #     - CHROME_USER_DATA=/app/data/chrome_data
+  #     - CHROME_PERSISTENT_SESSION=${CHROME_PERSISTENT_SESSION:-false}
+  #     - DISPLAY=:99
+  #     - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+  #     - RESOLUTION=${RESOLUTION:-1920x1080x24}
+  #     - RESOLUTION_WIDTH=${RESOLUTION_WIDTH:-1920}
+  #     - RESOLUTION_HEIGHT=${RESOLUTION_HEIGHT:-1080}
+  #     - VNC_PASSWORD=${VNC_PASSWORD:-vncpassword}
+  #     - CHROME_DEBUGGING_PORT=9222
+  #     - CHROME_DEBUGGING_HOST=localhost
+  #     - DBUS_STARTER_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+  #     - DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+  #   volumes:
+  #     - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+  #     - /tmp/.X11-unix:/tmp/.X11-unix
+  #     - ./tmp:/app/tmp  # For saving recordings, traces, and agent history
+  #   restart: unless-stopped
+  #   shm_size: '2gb'
+  #   cap_add:
+  #     - SYS_ADMIN
+  #   security_opt:
+  #     - seccomp=unconfined
+  #     - apparmor=unconfined
+  #   tmpfs:
+  #     - /tmp
+  #   healthcheck:
+  #     test: ["CMD", "nc", "-z", "localhost", "5901"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #   depends_on:
+  #     - mongodb
 
 
   mongodb:
-    image: mongo:5.0
+    image: mongo:latest
     restart: unless-stopped
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
