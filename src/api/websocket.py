@@ -7,6 +7,7 @@ from .agent_state import state_manager
 from src.utils import utils
 from browser_use.browser.browser import Browser, BrowserConfig
 from browser_use.browser.context import BrowserContextConfig
+from config import default_config
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,25 +16,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Initialize resources at startup
     try:
-        # Import with error handling
-        try:
-            from src.utils.default_config_settings import default_config
-            logger.info("Successfully loaded default configuration")
-        except ImportError as e:
-            logger.error(f"Failed to import default_config_settings: {e}")
-            # Create a minimal default config to prevent startup failure
-            default_config = {
-                'headless': True,
-                'disable_security': False,
-                'window_w': 1280,
-                'window_h': 720,
-                'use_vision': False,
-                'max_actions_per_step': 5,
-                'tool_calling_method': 'auto',
-                'max_steps': 100
-            }
-            logger.warning(f"Using fallback configuration: {default_config}")
-        
         # Initialize browser with predefined config
         browser_config = BrowserConfig(
             headless=default_config.get('headless', True),
