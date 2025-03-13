@@ -36,6 +36,7 @@ services:
       - CHROME_DEBUGGING_HOST=localhost
       - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
     volumes:
+      - /run/user/1000/bus:/run/user/1000/bus
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ./tmp:/app/tmp  # For saving recordings, traces, and agent history
     restart: unless-stopped
@@ -44,6 +45,7 @@ services:
       - SYS_ADMIN
     security_opt:
       - seccomp=unconfined
+      - apparmor:unconfined
     tmpfs:
       - /tmp
     healthcheck:
