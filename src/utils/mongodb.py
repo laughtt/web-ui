@@ -18,18 +18,21 @@ class MongoDB:
     def connect(self):
         """Connect to MongoDB using environment variables"""
         try:
-            mongodb_uri = os.getenv("MONGODB_URI", "mongodb://mongodb:27017/browseruse")
+            mongodb_uri = os.getenv("MONGODB_URI", "mongodb://admin:password123@localhost:27017")
             mongodb_database = os.getenv("MONGODB_DATABASE", "browseruse")
             
             # Get authentication credentials if provided
             username = os.getenv("MONGO_ROOT_USERNAME", "admin")
-            password = os.getenv("MONGO_ROOT_PASSWORD", "password")
+            password = os.getenv("MONGO_ROOT_PASSWORD", "password123")
             
             # Create MongoDB client
             self.client = MongoClient(mongodb_uri, 
                                      username=username, 
                                      password=password,
                                      serverSelectionTimeoutMS=5000)
+            
+            # Test connection
+            self.client.admin.command('ping')
             
             # Access database
             self.db = self.client[mongodb_database]
@@ -44,7 +47,13 @@ class MongoDB:
             logger.info(f"Connected to MongoDB: {mongodb_uri}, database: {mongodb_database}")
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
-            raise
+            self.client = None
+            self.db = None
+            self.tasks_collection = None
+    
+    def is_connected(self) -> bool:
+        """Check if MongoDB is connected and available"""
+        return self.client is not None and self.tasks_collection is not None
     
     def store_task(self, task_id: str, task_type: str, config: Dict[str, Any]) -> str:
         """
@@ -58,6 +67,10 @@ class MongoDB:
         Returns:
             task_id: The ID of the stored task
         """
+        if not self.is_connected():
+            logger.warning(f"MongoDB not connected, skipping task storage for {task_id}")
+            return task_id
+            
         try:
             # Create task document
             task_doc = {
@@ -81,7 +94,7 @@ class MongoDB:
             return task_id
         except Exception as e:
             logger.error(f"Error storing task {task_id}: {str(e)}")
-            raise
+            return task_id
     
     def update_task_status(self, task_id: str, status: str, result: Optional[Dict[str, Any]] = None, 
                           errors: Optional[str] = None) -> bool:
@@ -97,6 +110,10 @@ class MongoDB:
         Returns:
             bool: True if update was successful
         """
+        if not self.is_connected():
+            logger.warning(f"MongoDB not connected, skipping task update for {task_id}")
+            return False
+            
         try:
             update_doc = {
                 "status": status,
@@ -109,12 +126,12 @@ class MongoDB:
             if errors is not None:
                 update_doc["errors"] = errors
                 
-            result = self.tasks_collection.update_one(
+            update_result = self.tasks_collection.update_one(
                 {"task_id": task_id},
                 {"$set": update_doc}
             )
             
-            return result.modified_count > 0
+            return update_result.modified_count > 0
         except Exception as e:
             logger.error(f"Error updating task {task_id}: {str(e)}")
             return False
@@ -129,6 +146,10 @@ class MongoDB:
         Returns:
             dict: Task document or None if not found
         """
+        if not self.is_connected():
+            logger.warning(f"MongoDB not connected, cannot retrieve task {task_id}")
+            return None
+            
         try:
             task = self.tasks_collection.find_one({"task_id": task_id})
             return task
@@ -146,6 +167,10 @@ class MongoDB:
         Returns:
             list: List of task documents
         """
+        if not self.is_connected():
+            logger.warning("MongoDB not connected, cannot retrieve recent tasks")
+            return []
+            
         try:
             tasks = list(self.tasks_collection.find().sort("created_at", -1).limit(limit))
             return tasks
