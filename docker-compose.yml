@@ -34,6 +34,7 @@ services:
       - VNC_PASSWORD=${VNC_PASSWORD:-vncpassword}
       - CHROME_DEBUGGING_PORT=9222
       - CHROME_DEBUGGING_HOST=localhost
+      - DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ./tmp:/app/tmp  # For saving recordings, traces, and agent history
