@@ -29,6 +29,9 @@ from src.controller.custom_controller import CustomController
 from src.utils.default_config_settings import default_config, load_config_from_file, save_config_to_file
 from src.utils.utils import get_latest_files, capture_screenshot
 
+# Import the MongoDB module
+from src.utils.mongodb import db
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -59,7 +62,7 @@ class AgentConfig(BaseModel):
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.7
     llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
-    llm_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)  # Use environment value if exists
+    llm_api_key: Optional[str]
     use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     keep_browser_open: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     headless: bool = True
@@ -127,6 +130,10 @@ async def root():
 async def run_agent(config: AgentConfig, background_tasks: BackgroundTasks):
     """Start a browser agent with the given configuration"""
     task_id = f"task_{os.urandom(4).hex()}"
+    config.llm_api_key = os.getenv("OPENAI_API_KEY", None)
+    
+    # Store task in MongoDB
+    db.store_task(task_id, "agent", config.dict())
     
     background_tasks.add_task(
         run_browser_agent_task,
@@ -139,9 +146,16 @@ async def run_agent(config: AgentConfig, background_tasks: BackgroundTasks):
 @app.get("/agent-status/{task_id}")
 async def get_agent_status(task_id: str):
     """Get the status of a running agent task"""
-    # This would need a task tracking system implementation
-    # For simplicity, we'll return a placeholder
-    return {"task_id": task_id, "status": "running"}
+    task = db.get_task(task_id)
+    if task:
+        return {
+            "task_id": task_id,
+            "status": task["status"],
+            "created_at": task["created_at"],
+            "updated_at": task["updated_at"]
+        }
+    else:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
 
 @app.post("/stop-agent")
 async def stop_agent_endpoint():
@@ -174,6 +188,9 @@ async def stop_research_endpoint():
 async def run_research(config: ResearchConfig, background_tasks: BackgroundTasks):
     """Start a deep research task with the given configuration"""
     task_id = f"research_{os.urandom(4).hex()}"
+    
+    # Store task in MongoDB
+    db.store_task(task_id, "research", config.dict())
     
     background_tasks.add_task(
         run_research_task,
@@ -222,6 +239,9 @@ async def close_browser():
 async def run_browser_agent_task(task_id: str, config: AgentConfig):
     """Background task to run the browser agent"""
     global _global_agent_state, _global_browser, _global_browser_context, _global_agent
+    
+    # Update task status to running
+    db.update_task_status(task_id, "running")
     
     # Store task results (would be better in a proper task storage system)
     results = {
@@ -331,6 +351,20 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
             "history_file": history_file
         })
         
+        # Update task in MongoDB
+        db.update_task_status(
+            task_id, 
+            "completed", 
+            {
+                "final_result": final_result,
+                "model_actions": model_actions,
+                "model_thoughts": model_thoughts,
+                "latest_video": latest_video,
+                "trace_file": trace_file,
+                "history_file": history_file
+            }
+        )
+        
     except Exception as e:
         import traceback
         error_details = str(e) + "\n" + traceback.format_exc()
@@ -339,6 +373,10 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
             "status": "failed",
             "errors": error_details
         })
+        
+        # Update task in MongoDB with error
+        db.update_task_status(task_id, "failed", errors=error_details)
+        
     finally:
         _global_agent = None
         if not config.keep_browser_open:
@@ -350,7 +388,6 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
                 await _global_browser.close()
                 _global_browser = None
     
-    # In a real implementation, store results in a database or cache
     logger.info(f"Task {task_id} completed with status: {results['status']}")
     return results
 
@@ -570,6 +607,9 @@ async def run_research_task(task_id: str, config: ResearchConfig):
     from src.utils.deep_research import deep_research
     global _global_agent_state
     
+    # Update task status to running
+    db.update_task_status(task_id, "running")
+    
     results = {
         "task_id": task_id,
         "status": "running",
@@ -608,6 +648,16 @@ async def run_research_task(task_id: str, config: ResearchConfig):
             "file_path": file_path
         })
         
+        # Update task in MongoDB
+        db.update_task_status(
+            task_id, 
+            "completed", 
+            {
+                "markdown_content": markdown_content,
+                "file_path": file_path
+            }
+        )
+        
     except Exception as e:
         import traceback
         error_details = str(e) + "\n" + traceback.format_exc()
@@ -616,28 +666,46 @@ async def run_research_task(task_id: str, config: ResearchConfig):
             "status": "failed",
             "errors": error_details
         })
+        
+        # Update task in MongoDB with error
+        db.update_task_status(task_id, "failed", errors=error_details)
     
-    # In a real implementation, store results in a database or cache
     logger.info(f"Research task {task_id} completed with status: {results['status']}")
     return results
 
 @app.get("/task/{task_id}")
 async def get_task_result(task_id: str):
-    """
-    Get the result of a task
-    In a real implementation, this would retrieve from a database or cache
-    """
-    # Placeholder implementation - in a real app, retrieve from storage
-    return {"task_id": task_id, "status": "unknown", "message": "Task retrieval not implemented"}
+    """Get the result of a task"""
+    task = db.get_task(task_id)
+    if task:
+        return task
+    else:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
 
 @app.get("/research-file/{task_id}")
 async def get_research_file(task_id: str):
-    """
-    Get the research file for a completed research task
-    In a real implementation, this would retrieve the file path from a database
-    """
-    # Placeholder implementation - in a real app, retrieve file path from storage
-    return {"task_id": task_id, "status": "unknown", "message": "File retrieval not implemented"}
+    """Get the research file for a completed research task"""
+    task = db.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+        
+    if task["status"] != "completed":
+        raise HTTPException(status_code=400, detail=f"Task {task_id} is not completed")
+        
+    if "result" not in task or not task["result"] or "file_path" not in task["result"]:
+        raise HTTPException(status_code=404, detail=f"No file found for task {task_id}")
+        
+    file_path = task["result"]["file_path"]
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail=f"File not found at {file_path}")
+        
+    return FileResponse(file_path)
+
+@app.get("/tasks")
+async def get_recent_tasks(limit: int = 10):
+    """Get the most recent tasks"""
+    tasks = db.get_recent_tasks(limit)
+    return {"tasks": tasks}
 
 # Add a middleware to handle errors
 @app.middleware("http")
@@ -652,6 +720,11 @@ async def add_error_handling(request: Request, call_next):
             status_code=500,
             content={"detail": str(e), "type": "InternalServerError"}
         )
+
+# Cleanup MongoDB connection when the app shuts down
+@app.on_event("shutdown")
+async def shutdown_event():
+    db.close()
 
 # Entry point for running the app
 if __name__ == "__main__":

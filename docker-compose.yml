@@ -7,7 +7,6 @@ services:
       args:
         TARGETPLATFORM: ${TARGETPLATFORM:-linux/amd64}
     ports:
-      - "7788:7788"  # Gradio default port
       - "6080:6080"  # noVNC web interface
       - "5901:5901"  # VNC port
       - "9222:9222"  # Chrome remote debugging port
@@ -22,6 +21,8 @@ services:
       - DEEPSEEK_ENDPOINT=${DEEPSEEK_ENDPOINT:-https://api.deepseek.com}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - BROWSER_USE_LOGGING_LEVEL=${BROWSER_USE_LOGGING_LEVEL:-info}
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/browseruse}
+      - MONGODB_DATABASE=${MONGODB_DATABASE:-browseruse}
       - ANONYMIZED_TELEMETRY=false
       - CHROME_PATH=/usr/bin/google-chrome
       - CHROME_USER_DATA=/app/data/chrome_data
@@ -54,3 +55,40 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-password}
+      - MONGO_INITDB_DATABASE=${MONGODB_DATABASE:-browseruse}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_ROOT_PASSWORD:-password}
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      - ME_CONFIG_MONGODB_PORT=27017
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb_data:
