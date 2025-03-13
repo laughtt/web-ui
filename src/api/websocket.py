@@ -173,4 +173,43 @@ async def get_agent_status():
 @app.post("/agent/cleanup")
 async def cleanup_resources(keep_browser_open: bool = False):
     await state_manager.cleanup(keep_browser_open)
-    return {"status": "success", "message": "Resources cleaned up"} 
+    return {"status": "success", "message": "Resources cleaned up"}
+
+@app.post("/agent/run")
+async def run_agent_task(request: TaskRequest):
+    """
+    HTTP endpoint to run a single agent task and return the results.
+    This is an alternative to the WebSocket approach for simpler use cases.
+    """
+    try:
+        # Check if agent is initialized
+        if not state_manager.state.agent:
+            return {"status": "error", "message": "Agent not initialized"}
+        
+        # Clear any previous stop requests
+        state_manager.clear_stop()
+        
+        # Update agent's task
+        state_manager.state.agent.update_task(
+            task=request.task,
+            add_infos=request.add_infos or ""
+        )
+        
+        # Run the agent
+        history = await state_manager.state.agent.run(
+            max_steps=default_config.get('max_steps', 100)
+        )
+        
+        # Return results
+        return {
+            "status": "success",
+            "result": {
+                "final_result": history.final_result(),
+                "errors": history.errors(),
+                "model_actions": history.model_actions(),
+                "model_thoughts": history.model_thoughts()
+            }
+        }
+    except Exception as e:
+        logger.error(f"Error running agent task: {str(e)}")
+        return {"status": "error", "message": str(e)} 
