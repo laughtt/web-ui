@@ -22,8 +22,8 @@ class MongoDB:
             mongodb_database = os.getenv("MONGODB_DATABASE", "browseruse")
             
             # Get authentication credentials if provided
-            username = os.getenv("MONGO_ROOT_USERNAME", "admin")
-            password = os.getenv("MONGO_ROOT_PASSWORD", "password123")
+            username = os.getenv("MONGO_ROOT_USERNAME", "root")
+            password = os.getenv("MONGO_ROOT_PASSWORD", "rootpassword")
             
             # Create MongoDB client
             self.client = MongoClient(mongodb_uri, 
