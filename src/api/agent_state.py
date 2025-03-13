@@ -12,6 +12,7 @@ class GlobalState:
     browser: Optional[Browser] = None
     browser_context: Optional[any] = None
     agent: Optional[any] = None
+    default_llm: Optional[any] = None  # Add default_llm field
     agent_state: AgentState = AgentState()
     active_connections: Dict[str, AsyncWebSocketHandler] = None
 

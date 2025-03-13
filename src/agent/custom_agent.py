@@ -583,3 +583,9 @@ class CustomAgent(Agent):
             logger.info(f'Created GIF at {output_path}')
         else:
             logger.warning('No images found in history to create GIF')
+
+    def update_task(self, task: str, add_infos: str = ""):
+        """Update the agent's current task and additional information."""
+        self.task = task
+        self.add_infos = add_infos
+        # Reset any task-specific state if needed
