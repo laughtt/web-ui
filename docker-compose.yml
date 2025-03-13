@@ -60,12 +60,12 @@ services:
 
 
   mongodb:
-    image: mongo:latest
-    container_name: mongodb
+    image: mongo:5.0
     restart: unless-stopped
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=password123
+      - MONGO_INITDB_DATABASE=browseruse
     ports:
       - "27017:27017"
     volumes:
@@ -73,7 +73,6 @@ services:
 
   mongo-express:
     image: mongo-express:latest
-    container_name: mongo-express
     restart: unless-stopped
     ports:
       - "8081:8081"
