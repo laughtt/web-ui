@@ -1,7 +1,7 @@
 from .websocket import app
 from .models import TaskRequest, AgentUpdate, MessageType, ErrorResponse
-from .agent_manager import AgentManager
 from .logging import WebSocketLogHandler, AsyncWebSocketHandler
+from .agent_state import state_manager
 
 __all__ = [
     'app',
@@ -9,7 +9,7 @@ __all__ = [
     'AgentUpdate',
     'MessageType',
     'ErrorResponse',
-    'AgentManager',
     'WebSocketLogHandler',
-    'AsyncWebSocketHandler'
+    'AsyncWebSocketHandler',
+    'state_manager'
 ] 
