@@ -10,7 +10,7 @@ from typing import Optional, List, Dict, Any, Union
 import uvicorn
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Import existing components
 from browser_use.agent.service import Agent
@@ -53,45 +53,45 @@ app.add_middleware(
 
 # Pydantic models for request validation
 class AgentConfig(BaseModel):
-    agent_type: str = "custom"  # Default to custom agent as it's likely more feature-rich
-    llm_provider: str = "openai"  # OpenAI is a common default
-    llm_model_name: str = "gpt-4o"  # Modern capable model
-    llm_num_ctx: int = 16384  # Reasonable context length for complex tasks
-    llm_temperature: float = 0.7  # Balanced creativity vs determinism
-    llm_base_url: Optional[str] = None
-    llm_api_key: Optional[str] = None
-    use_own_browser: bool = False  # Simpler to start with managed browser
-    keep_browser_open: bool = True  # Better performance between tasks
-    headless: bool = True  # More efficient for API usage
-    disable_security: bool = False  # Security should be on by default
-    window_w: int = 1280  # Standard resolution width
-    window_h: int = 720  # Standard resolution height
+    agent_type: str = "custom"
+    llm_provider: str = "openai"  # Default provider
+    llm_model_name: str = "gpt-4o"  # Default model
+    llm_num_ctx: int = 16384
+    llm_temperature: float = 0.7
+    llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
+    llm_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)  # Use environment value if exists
+    use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
+    keep_browser_open: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
+    headless: bool = True
+    disable_security: bool = False
+    window_w: int = int(os.getenv("RESOLUTION_WIDTH", "1280"))  # Use environment value if exists
+    window_h: int = int(os.getenv("RESOLUTION_HEIGHT", "720"))  # Use environment value if exists
     save_recording_path: Optional[str] = "./tmp/record_videos"
     save_agent_history_path: Optional[str] = "./tmp/agent_history"
     save_trace_path: Optional[str] = "./tmp/traces"
-    enable_recording: bool = False  # Recording off by default to save resources
+    enable_recording: bool = False
     task: str = "Navigate to example.com and summarize the main content of the page."
     add_infos: Optional[str] = None
-    max_steps: int = 15  # Reasonable limit for most tasks
-    use_vision: bool = True  # Vision is valuable for browser automation
-    max_actions_per_step: int = 5  # Balanced for most tasks
-    tool_calling_method: str = "function_calling"  # Most reliable method
-    chrome_cdp: Optional[str] = None
+    max_steps: int = 15
+    use_vision: bool = True
+    max_actions_per_step: int = 5
+    tool_calling_method: str = "function_calling"
+    chrome_cdp: Optional[str] = os.getenv("CHROME_CDP", None)  # Use environment value if exists
 
 class ResearchConfig(BaseModel):
     research_task: str = "Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects."
-    max_search_iteration_input: int = 3  # Good balance between depth and time
-    max_query_per_iter_input: int = 3  # Multiple queries per iteration for breadth
+    max_search_iteration_input: int = 3
+    max_query_per_iter_input: int = 3
     llm_provider: str = "openai"
-    llm_model_name: str = "gpt-4o"  # Research benefits from stronger models
-    llm_num_ctx: int = 16384  # Larger context for research tasks
-    llm_temperature: float = 0.5  # Lower temperature for more factual responses
-    llm_base_url: Optional[str] = None
-    llm_api_key: Optional[str] = None
-    use_vision: bool = True  # Vision helps with research on web pages
-    use_own_browser: bool = False
-    headless: bool = True  # Headless is more efficient for research
-    chrome_cdp: Optional[str] = None
+    llm_model_name: str = "gpt-4o"
+    llm_num_ctx: int = 16384
+    llm_temperature: float = 0.5
+    llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
+    llm_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)  # Use environment value if exists
+    use_vision: bool = True
+    use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
+    headless: bool = True
+    chrome_cdp: Optional[str] = os.getenv("CHROME_CDP", None)  # Use environment value if exists
 
 # Helper functions (ported from original code)
 def resolve_sensitive_env_variables(text):
@@ -659,7 +659,7 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description="Browser Agent API")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=8001, help="Port to bind to")
+    parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
     
     args = parser.parse_args()
     
