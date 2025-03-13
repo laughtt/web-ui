@@ -125,12 +125,13 @@ class CustomAgentMessagePrompt(AgentMessagePrompt):
             max_error_length: int = 400,
             step_info: Optional[CustomAgentStepInfo] = None,
     ):
-        super(CustomAgentMessagePrompt, self).__init__(state=state,
-                                                       result=result,
-                                                       include_attributes=include_attributes,
-                                                       max_error_length=max_error_length,
-                                                       step_info=step_info
-                                                       )
+        super().__init__(
+            state=state,
+            result=result,
+            include_attributes=include_attributes,
+            max_error_length=max_error_length,
+            step_info=step_info
+        )
         self.actions = actions
 
     def get_user_message(self, use_vision: bool = True) -> HumanMessage:
