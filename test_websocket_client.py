@@ -14,12 +14,20 @@ async def connect_and_run_task():
 
             # Example task
             task_request = {
-                "task": "go to google.com and search for 'OpenAI'",
+                "task": "go to google.com and search for 'OpenAI'  and click on the first search result",
                 "add_infos": "Click on the first search result",
                 "config": {
                     "headless": False,
                     "use_vision": True,
-                    "max_steps": 10
+                    "max_steps": 10,
+                    # Add LLM configuration
+                    "llm_provider": "openai",
+                    "llm_model_name": "gpt-4",  # or "gpt-3.5-turbo" depending on your needs
+                    "llm_temperature": 0.7,
+                    "llm_num_ctx": 4096,
+                    # Add your OpenAI API key if not set in environment
+                    # "llm_api_key": "your-api-key-here",
+                    # "llm_base_url": "https://api.openai.com/v1"  # Optional if using default OpenAI
                 }
             }
 
