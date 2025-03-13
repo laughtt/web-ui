@@ -498,7 +498,7 @@ async def run_custom_agent(
         controller = CustomController()
 
         # Initialize global browser if needed
-        if ((_global_browser is None) or (cdp_url and cdp_url != "" and cdp_url != None)):
+        if _global_browser is None:
             _global_browser = CustomBrowser(
                 config=BrowserConfig(
                     headless=headless,
@@ -509,7 +509,7 @@ async def run_custom_agent(
                 )
             )
 
-        if (_global_browser_context is None or (chrome_cdp and cdp_url != "" and cdp_url != None)):
+        if _global_browser_context:
             _global_browser_context = await _global_browser.new_context(
                 config=BrowserContextConfig(
                     trace_path=save_trace_path if save_trace_path else None,
