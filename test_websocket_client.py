@@ -6,7 +6,7 @@ from websockets.exceptions import ConnectionClosed
 from datetime import datetime
 
 async def connect_and_run_task():
-    uri = "ws://localhost:8000/agent/ws"
+    uri = "ws://18.116.10.205:8000/agent/ws"
     
     try:
         async with connect(uri) as websocket:

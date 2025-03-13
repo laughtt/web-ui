@@ -46,7 +46,9 @@ class AsyncWebSocketHandler:
             
         try:
             update = AgentUpdate(type=update_type, data=data)
-            await self.websocket.send_json(update.model_dump())
+            # Convert to dict and handle datetime serialization
+            update_dict = update.model_dump(mode='json')
+            await self.websocket.send_json(update_dict)
         except WebSocketDisconnect:
             self._closed = True
         except Exception as e:

@@ -22,6 +22,11 @@ class AgentUpdate(BaseModel):
     type: MessageType = Field(..., description="Type of the update message")
     data: Any = Field(..., description="The update data")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Timestamp of the update")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat()
+        }
 
 
 class ErrorResponse(BaseModel):
