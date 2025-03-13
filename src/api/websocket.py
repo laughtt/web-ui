@@ -7,7 +7,7 @@ from .agent_state import state_manager
 from src.utils import utils
 from browser_use.browser.browser import Browser, BrowserConfig
 from browser_use.browser.context import BrowserContextConfig
-from config import default_config
+from src.api.config import default_config
 import logging
 
 logger = logging.getLogger(__name__)
