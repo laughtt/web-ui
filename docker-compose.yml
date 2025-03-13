@@ -37,6 +37,7 @@ services:
       - DBUS_STARTER_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
       - DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
     volumes:
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ./tmp:/app/tmp  # For saving recordings, traces, and agent history
     restart: unless-stopped
