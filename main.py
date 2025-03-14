@@ -1,4 +1,4 @@
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
+from fastapi import FastAPI, BackgroundTasks, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -9,6 +9,9 @@ import asyncio
 from typing import Optional, List, Dict, Any, Union
 import uvicorn
 from dotenv import load_dotenv
+import json
+import traceback
+from datetime import datetime
 
 load_dotenv(override=True)
 
@@ -322,7 +325,8 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
                 use_vision=config.use_vision,
                 max_actions_per_step=config.max_actions_per_step,
                 tool_calling_method=config.tool_calling_method,
-                chrome_cdp=config.chrome_cdp
+                chrome_cdp=config.chrome_cdp,
+                register_new_step_callback=None
             )
         else:
             raise ValueError(f"Invalid agent type: {config.agent_type}")
@@ -510,7 +514,8 @@ async def run_custom_agent(
         use_vision,
         max_actions_per_step,
         tool_calling_method,
-        chrome_cdp
+        chrome_cdp,
+        register_new_step_callback=None
 ):
     try:
         global _global_browser, _global_browser_context, _global_agent_state, _global_agent
@@ -572,7 +577,7 @@ async def run_custom_agent(
                 agent_prompt_class=CustomAgentMessagePrompt,
                 max_actions_per_step=max_actions_per_step,
                 tool_calling_method=tool_calling_method,
-                register_new_step_callback=tool_usage_callback
+                register_new_step_callback=register_new_step_callback
             )
         history = await _global_agent.run(max_steps=max_steps)
 
@@ -755,6 +760,173 @@ def tool_usage_callback(browser_state, model_output, step_number):
 @app.on_event("shutdown")
 async def shutdown_event():
     db.close()
+
+# Store connected WebSocket clients
+connected_websockets = {}
+
+@app.websocket("/agent/ws")
+async def websocket_agent(websocket: WebSocket):
+    await websocket.accept()
+    
+    # Generate a unique client ID
+    client_id = f"client_{os.urandom(4).hex()}"
+    connected_websockets[client_id] = websocket
+    
+    try:
+        # Receive the initial task configuration
+        data = await websocket.receive_text()
+        config_data = json.loads(data)
+        
+        # Extract task details
+        task = config_data.get("task", "Navigate to example.com and summarize the main content of the page.")
+        add_infos = config_data.get("add_infos", "")
+        
+        # Extract config settings or use defaults
+        config_settings = config_data.get("config", {})
+        agent_config = AgentConfig(
+            task=task,
+            add_infos=add_infos,
+            headless=config_settings.get("headless", True),
+            use_vision=config_settings.get("use_vision", True),
+            max_steps=config_settings.get("max_steps", 15),
+            max_actions_per_step=config_settings.get("max_actions_per_step", 5),
+            llm_api_key=os.getenv("OPENAI_API_KEY", None)  # Fix missing parameter
+        )
+        
+        # Send acknowledgment
+        await websocket.send_json({
+            "type": "status",
+            "data": {
+                "status": "starting",
+                "message": f"Starting agent with task: {task}"
+            },
+            "timestamp": datetime.now().isoformat() + "Z"
+        })
+        
+        # Define the websocket callback for tool usage
+        def ws_tool_usage_callback(browser_state, model_output, step_number):
+            """Send tool usage information to the WebSocket client"""
+            actions = []
+            for action in model_output.action:
+                try:
+                    # Get the action type and parameters
+                    action_data = action.model_dump(exclude_unset=True)
+                    action_type = next(iter(action_data.keys())) if action_data else "unknown"
+                    action_params = action_data.get(action_type, {})
+                    
+                    actions.append({
+                        "type": action_type,
+                        "parameters": action_params
+                    })
+                except Exception as e:
+                    actions.append({
+                        "type": "error",
+                        "error": str(e)
+                    })
+            
+            # Create message with all relevant information
+            message = {
+                "type": "tool_usage",
+                "data": {
+                    "step": step_number,
+                    "thought": model_output.current_state.thought,
+                    "summary": model_output.current_state.summary,
+                    "task_progress": model_output.current_state.task_progress,
+                    "future_plans": model_output.current_state.future_plans,
+                    "actions": actions
+                },
+                "timestamp": datetime.now().isoformat() + "Z"
+            }
+            
+            # Send to this specific client
+            asyncio.create_task(send_ws_message(websocket, message))
+        
+        # Helper function to send WebSocket messages asynchronously
+        async def send_ws_message(ws, message):
+            try:
+                await ws.send_json(message)
+            except Exception as e:
+                logger.error(f"Error sending WebSocket message: {e}")
+        
+        # Run the agent with the WebSocket callback
+        task_id = f"ws_task_{os.urandom(4).hex()}"
+        
+        # Store task in MongoDB
+        db.store_task(task_id, "agent", agent_config.dict())
+        
+        # Update client with task ID
+        await websocket.send_json({
+            "type": "status",
+            "data": {
+                "status": "running",
+                "task_id": task_id,
+                "message": "Agent is running"
+            },
+            "timestamp": datetime.now().isoformat() + "Z"
+        })
+        
+        # Run the agent
+        result = await run_custom_agent(
+            llm=utils.get_llm_model(
+                provider=agent_config.llm_provider,
+                model_name=agent_config.llm_model_name,
+                num_ctx=agent_config.llm_num_ctx,
+                temperature=agent_config.llm_temperature,
+                base_url=agent_config.llm_base_url,
+                api_key=agent_config.llm_api_key,
+            ),
+            use_own_browser=agent_config.use_own_browser,
+            keep_browser_open=agent_config.keep_browser_open,
+            headless=agent_config.headless,
+            disable_security=agent_config.disable_security,
+            window_w=agent_config.window_w,
+            window_h=agent_config.window_h,
+            save_recording_path=agent_config.save_recording_path if agent_config.enable_recording else None,
+            save_agent_history_path=agent_config.save_agent_history_path,
+            save_trace_path=agent_config.save_trace_path,
+            task=task,
+            add_infos=add_infos,
+            max_steps=agent_config.max_steps,
+            use_vision=agent_config.use_vision,
+            max_actions_per_step=agent_config.max_actions_per_step,
+            tool_calling_method=agent_config.tool_calling_method,
+            chrome_cdp=agent_config.chrome_cdp,
+            register_new_step_callback=ws_tool_usage_callback
+        )
+        
+        # Send final results
+        final_result, errors, model_actions, model_thoughts, trace_file, history_file = result
+        
+        await websocket.send_json({
+            "type": "result",
+            "data": {
+                "final_result": final_result,
+                "errors": errors,
+                "model_actions": model_actions,
+                "model_thoughts": model_thoughts,
+                "trace_file": trace_file,
+                "history_file": history_file
+            },
+            "timestamp": datetime.now().isoformat() + "Z"
+        })
+        
+    except WebSocketDisconnect:
+        logger.info(f"WebSocket client {client_id} disconnected")
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "error": str(e),
+                "details": traceback.format_exc(),
+                "timestamp": datetime.now().isoformat() + "Z"
+            })
+        except:
+            pass
+    finally:
+        # Clean up
+        if client_id in connected_websockets:
+            del connected_websockets[client_id]
 
 # Entry point for running the app
 if __name__ == "__main__":
