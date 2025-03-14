@@ -902,10 +902,6 @@ async def websocket_agent(websocket: WebSocket):
             "data": {
                 "final_result": final_result,
                 "errors": errors,
-                "model_actions": model_actions,
-                "model_thoughts": model_thoughts,
-                "trace_file": trace_file,
-                "history_file": history_file
             },
             "timestamp": datetime.now().isoformat() + "Z"
         })
