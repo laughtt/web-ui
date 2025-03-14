@@ -129,13 +129,13 @@ async def connect_and_run_task(task, add_infos="", headless=False, max_steps=100
 
 def main():
     parser = argparse.ArgumentParser(description="WebSocket Agent Client")
-    parser.add_argument("--task", type=str, default="give me a table of all the gpt prices from openai'", 
+    parser.add_argument("--task", type=str, default="go into deepseek webpage check all api prices, do a table then go to claude check api prices and return me both tables of prices. '", 
                         help="The task for the agent to perform")
     parser.add_argument("--info", type=str, default="", 
                         help="Additional information for the agent")
     parser.add_argument("--headless", action="store_true", 
                         help="Run the browser in headless mode")
-    parser.add_argument("--steps", type=int, default=10, 
+    parser.add_argument("--steps", type=int, default=200, 
                         help="Maximum number of steps for the agent")
     
     args = parser.parse_args()
