@@ -3,6 +3,7 @@ from pymongo import MongoClient
 import os
 import logging
 from datetime import datetime
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +56,41 @@ class MongoDB:
         """Check if MongoDB is connected and available"""
         return self.client is not None and self.tasks_collection is not None
     
+    def _serialize_for_mongodb(self, data: Any) -> Any:
+        """
+        Recursively serialize data to ensure it's MongoDB compatible
+        
+        Args:
+            data: Any data structure to serialize
+            
+        Returns:
+            MongoDB compatible data structure
+        """
+        if data is None:
+            return None
+        
+        if isinstance(data, (str, int, float, bool)):
+            return data
+        
+        if isinstance(data, (datetime,)):
+            return data
+        
+        if isinstance(data, dict):
+            return {k: self._serialize_for_mongodb(v) for k, v in data.items()}
+        
+        if isinstance(data, list):
+            return [self._serialize_for_mongodb(item) for item in data]
+        
+        if isinstance(data, tuple):
+            return [self._serialize_for_mongodb(item) for item in data]
+        
+        # For custom objects or anything else, convert to string representation
+        try:
+            return str(data)
+        except Exception as e:
+            logger.warning(f"Could not serialize object of type {type(data)}: {str(e)}")
+            return f"<Unserializable object of type {type(data).__name__}>"
+    
     def store_task(self, task_id: str, task_type: str, config: Dict[str, Any]) -> str:
         """
         Store a new task in the database
@@ -77,7 +113,7 @@ class MongoDB:
                 "task_id": task_id,
                 "task_type": task_type,
                 "status": "started",
-                "config": config,
+                "config": self._serialize_for_mongodb(config),
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow(),
                 "result": None,
@@ -121,11 +157,13 @@ class MongoDB:
             }
             
             if result is not None:
-                update_doc["result"] = result
+                # Serialize complex objects in the result
+                serialized_result = self._serialize_for_mongodb(result)
+                update_doc["result"] = serialized_result
                 
             if errors is not None:
                 update_doc["errors"] = errors
-                
+            
             update_result = self.tasks_collection.update_one(
                 {"task_id": task_id},
                 {"$set": update_doc}
@@ -185,4 +223,4 @@ class MongoDB:
             logger.info("MongoDB connection closed")
 
 # Create a singleton instance
-db = MongoDB() 
+db = MongoDB()
