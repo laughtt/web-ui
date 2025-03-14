@@ -571,7 +571,8 @@ async def run_custom_agent(
                 system_prompt_class=CustomSystemPrompt,
                 agent_prompt_class=CustomAgentMessagePrompt,
                 max_actions_per_step=max_actions_per_step,
-                tool_calling_method=tool_calling_method
+                tool_calling_method=tool_calling_method,
+                register_new_step_callback=tool_usage_callback
             )
         history = await _global_agent.run(max_steps=max_steps)
 
@@ -720,6 +721,35 @@ async def add_error_handling(request: Request, call_next):
             status_code=500,
             content={"detail": str(e), "type": "InternalServerError"}
         )
+    
+def tool_usage_callback(browser_state, model_output, step_number):
+    """
+    Test callback function to log tool usage information to the console
+    
+    Args:
+        browser_state: The current browser state
+        model_output: The model's output containing actions/tools used
+        step_number: The current step number
+    """
+    print(f"\n===== TOOL USAGE - STEP {step_number} =====")
+    print(f"Thought: {model_output.current_state.thought}")
+    
+    # Log each action/tool
+    for i, action in enumerate(model_output.action):
+        try:
+            # Convert action to a dict for display
+            action_data = action.model_dump(exclude_unset=True)
+            action_name = action_data.get("name", "unknown")
+            action_params = action_data.get("parameters", {})
+            
+            print(f"\nTool {i+1}: {action_name}")
+            print(f"Parameters: {action_params}")
+        except Exception as e:
+            print(f"\nTool {i+1}: Error serializing action - {str(e)}")
+    
+    print(f"\nSummary: {model_output.current_state.summary}")
+    print(f"Task Progress: {model_output.current_state.task_progress}")
+    print("======================================\n")
 
 # Cleanup MongoDB connection when the app shuts down
 @app.on_event("shutdown")
@@ -737,3 +767,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     uvicorn.run("main:app", host=args.host, port=args.port, reload=False)
+
+
