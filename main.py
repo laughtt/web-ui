@@ -78,7 +78,7 @@ class AgentConfig(BaseModel):
     enable_recording: bool = False
     task: str = "Navigate to example.com and summarize the main content of the page."
     add_infos: Optional[str] = None
-    max_steps: int = 15
+    max_steps: int = 100
     use_vision: bool = True
     max_actions_per_step: int = 5
     tool_calling_method: str = "function_calling"
@@ -788,8 +788,8 @@ async def websocket_agent(websocket: WebSocket):
             add_infos=add_infos,
             headless=config_settings.get("headless", True),
             use_vision=config_settings.get("use_vision", True),
-            max_steps=config_settings.get("max_steps", 15),
-            max_actions_per_step=config_settings.get("max_actions_per_step", 5),
+            max_steps=config_settings.get("max_steps", 100),
+            max_actions_per_step=config_settings.get("max_actions_per_step", 10),
             llm_api_key=os.getenv("OPENAI_API_KEY", None)  # Fix missing parameter
         )
         

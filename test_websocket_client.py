@@ -7,7 +7,7 @@ from datetime import datetime
 import argparse
 import sys
 
-async def connect_and_run_task(task, add_infos="", headless=False, max_steps=10):
+async def connect_and_run_task(task, add_infos="", headless=False, max_steps=100):
     uri = "ws://13.58.59.22:8000/agent/ws"
     
     try:
@@ -129,7 +129,7 @@ async def connect_and_run_task(task, add_infos="", headless=False, max_steps=10)
 
 def main():
     parser = argparse.ArgumentParser(description="WebSocket Agent Client")
-    parser.add_argument("--task", type=str, default="go to google.com and search for 'OpenAI'", 
+    parser.add_argument("--task", type=str, default="give me a table of all the gpt prices from openai'", 
                         help="The task for the agent to perform")
     parser.add_argument("--info", type=str, default="", 
                         help="Additional information for the agent")
