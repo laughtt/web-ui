@@ -79,7 +79,7 @@ services:
 
   mongo-db:
     image: mongo:latest
-    container_name: mongo
+    container_name: mongo-db
     env_file:
       - .env
     ports:
