@@ -1,5 +1,6 @@
 from typing import Dict, Any, Optional, List
 from pymongo import MongoClient
+import motor.motor_asyncio
 import os
 import logging
 from datetime import datetime
@@ -19,23 +20,18 @@ class MongoDB:
     def connect(self):
         """Connect to MongoDB using environment variables"""
         try:
-            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME', 'root')}:{os.getenv('MONGODB_ROOT_PASSWORD', 'rootpassword')}@mongo-db:27017/{os.getenv('MONGODB_DATABASE_NAME', 'brownser')}?authSource=admin"
+            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME', 'root')}:{os.getenv('MONGODB_ROOT_PASSWORD', 'rootpassword')}@localhost:27017/{os.getenv('MONGODB_DATABASE_NAME', 'brownser')}"
             print(mongo_uri)
             # Create MongoDB client
-            self.client = MongoClient(mongo_uri,
+            self.client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri,
                                      serverSelectionTimeoutMS=5000)
-            
-            # Test connection
-            self.client.admin.command('ping')
-            
-            # Create indexes for faster queries
-            self.tasks_collection.create_index("task_id", unique=True)
-            self.tasks_collection.create_index("created_at")
-            
+            self.db = self.client["brownser"]
+            self.instances = self.db["instances"]
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
             self.client = None
-            self.tasks_collection = None
+            self.db = None
+            self.instances = None
     
     def is_connected(self) -> bool:
         """Check if MongoDB is connected and available"""
