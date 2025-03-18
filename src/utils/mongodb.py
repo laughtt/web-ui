@@ -22,7 +22,7 @@ class MongoDB:
             mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
             mongodb_database = os.getenv("MONGODB_DATABASE", "brownser")
             mongodb_username = os.getenv("ME_CONFIG_BASICAUTH_USERNAME", "root")
-            mongodb_password = os.getenv("ME_CONFIG_BASICAUTH_USERNAME", "rootpassword")
+            mongodb_password = os.getenv("ME_CONFIG_BASICAUTH_PASSWORD", "rootpassword")
             
             # Create MongoDB client
             self.client = MongoClient(mongodb_uri,
