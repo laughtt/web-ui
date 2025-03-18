@@ -28,6 +28,7 @@ class MongoDB:
             self.client = MongoClient(mongodb_uri,
                                      username=mongodb_username,
                                      password=mongodb_password,
+                                     database=mongodb_database,
                                      serverSelectionTimeoutMS=5000)
             
             # Test connection
