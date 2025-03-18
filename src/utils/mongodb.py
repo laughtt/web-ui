@@ -38,7 +38,6 @@ class MongoDB:
             self.tasks_collection.create_index("task_id", unique=True)
             self.tasks_collection.create_index("created_at")
             
-            logger.info(f"Connected to MongoDB: {mongodb_uri}, database: {mongodb_database}")
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
             self.client = None
