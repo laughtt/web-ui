@@ -28,12 +28,6 @@ class MongoDB:
             # Test connection
             self.client.admin.command('ping')
             
-            # Access database
-            self.db = self.client[mongodb_database]
-            
-            # Access collections
-            self.tasks_collection = self.db["tasks"]
-            
             # Create indexes for faster queries
             self.tasks_collection.create_index("task_id", unique=True)
             self.tasks_collection.create_index("created_at")
@@ -41,7 +35,6 @@ class MongoDB:
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
             self.client = None
-            self.db = None
             self.tasks_collection = None
     
     def is_connected(self) -> bool:
