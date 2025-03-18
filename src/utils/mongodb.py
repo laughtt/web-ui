@@ -19,9 +19,9 @@ class MongoDB:
     def connect(self):
         """Connect to MongoDB using environment variables"""
         try:
-            mongo_uri = f"mongodb://{os.getenv("MONGODB_ROOT_USERNAME")}:{os.getenv("MONGODB_ROOT_PASSWORD")}@localhost:27017/{os.getenv("MONGODB_DATABASE_NAME")}?authSource=admin"
+            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME')}:{os.getenv('MONGODB_ROOT_PASSWORD')}@localhost:27017/{os.getenv('MONGODB_DATABASE_NAME')}?authSource=admin"
             # Create MongoDB client
-            self.client = MongoClient(mongodb_uri,
+            self.client = MongoClient(mongo_uri,
                                      serverSelectionTimeoutMS=5000)
             
             # Test connection
