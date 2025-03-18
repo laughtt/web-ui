@@ -19,10 +19,10 @@ class MongoDB:
     def connect(self):
         """Connect to MongoDB using environment variables"""
         try:
-            mongodb_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+            mongodb_uri = os.getenv("MONGODB_URI", "mongodb://mongo-db:27017")
             mongodb_database = os.getenv("MONGODB_DATABASE", "brownser")
-            mongodb_username = os.getenv("ME_CONFIG_BASICAUTH_USERNAME", "root")
-            mongodb_password = os.getenv("ME_CONFIG_BASICAUTH_PASSWORD", "rootpassword")
+            mongodb_username = os.getenv("MONGO_INITDB_ROOT_USERNAME", "root")
+            mongodb_password = os.getenv("MONGO_INITDB_ROOT_PASSWORD", "rootpassword")
             
             # Create MongoDB client
             self.client = MongoClient(mongodb_uri,
