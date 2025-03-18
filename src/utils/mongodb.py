@@ -20,7 +20,7 @@ class MongoDB:
     def connect(self):
         """Connect to MongoDB using environment variables"""
         try:
-            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME', 'root')}:{os.getenv('MONGODB_ROOT_PASSWORD', 'rootpassword')}@localhost:27017/{os.getenv('MONGODB_DATABASE_NAME', 'brownser')}"
+            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME', 'root')}:{os.getenv('MONGODB_ROOT_PASSWORD', 'rootpassword')}@{os.getenv('MONGODB_HOST', 'localhost')}:{os.getenv('MONGODB_PORT', 27017)}/{os.getenv('MONGODB_DATABASE_NAME', 'brownser')}"
             print(mongo_uri)
             # Create MongoDB client
             self.client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri,
