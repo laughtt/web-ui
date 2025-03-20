@@ -61,8 +61,6 @@ services:
       retries: 3
     depends_on:
       - mongodb
-    networks:
-      - mongo-compose-network
 
 
   mongo-express:
@@ -71,8 +69,6 @@ services:
       - 8081:8081
     env_file:
       - .env
-    networks:
-      - mongo-compose-network
     restart: always
     depends_on:
       - mongodb
@@ -85,8 +81,7 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data_container:/data/db
-    networks:
-      - mongo-compose-network
+ 
 
 
 networks:
