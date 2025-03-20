@@ -682,7 +682,7 @@ async def run_research_task(task_id: str, config: ResearchConfig):
 @app.get("/task/{task_id}")
 async def get_task_result(task_id: str):
     """Get the result of a task"""
-    task = db.get_task(task_id)
+    task = await db.get_task(task_id)
     if task:
         return task
     else:
