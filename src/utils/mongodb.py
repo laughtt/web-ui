@@ -20,7 +20,7 @@ class MongoDB:
     def connect(self):
         """Connect to MongoDB using environment variables"""
         try:
-            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME')}:{os.getenv('MONGODB_ROOT_PASSWORD')}@mongodb:27017/"
+            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME')}:{os.getenv('MONGODB_ROOT_PASSWORD')}@mongodb:27017/?authSource=admin"
             self.mongo_uri = mongo_uri
             # Create MongoDB client
             print(mongo_uri)
@@ -31,13 +31,16 @@ class MongoDB:
             self.instances = self.db["instances"]
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
-            self.client = None
-            self.db = None
-            self.instances = None
     
     def is_connected(self) -> bool:
-        """Check if MongoDB is connected and available"""
-        return self.client is not None
+        print(self.client)
+        print(self.db)
+        print(self.tasks_collection)
+        """Check if MongoDB is connected and available"""       
+        if self.client is None:
+            return False
+        return True
+    
     def _serialize_for_mongodb(self, data: Any) -> Any:
         """
         Recursively serialize data to ensure it's MongoDB compatible
