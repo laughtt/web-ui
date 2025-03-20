@@ -36,8 +36,7 @@ class MongoDB:
     
     def is_connected(self) -> bool:
         """Check if MongoDB is connected and available"""
-        return self.client is not None and self.tasks_collection is not None
-    
+        return self.client is not None
     def _serialize_for_mongodb(self, data: Any) -> Any:
         """
         Recursively serialize data to ensure it's MongoDB compatible
@@ -169,6 +168,7 @@ class MongoDB:
         """
         if not self.is_connected():
             logger.warning(f"MongoDB not connected, cannot retrieve task {task_id}")
+            logger.warning(f"MongoDB not connected, {self.mongo_uri}")
             return None
             
         try:
@@ -190,6 +190,7 @@ class MongoDB:
         """
         if not self.is_connected():
             logger.warning("MongoDB not connected, cannot retrieve recent tasks")
+            logger.warning(f"MongoDB not connected, {self.mongo_uri}")
             return []
             
         try:
