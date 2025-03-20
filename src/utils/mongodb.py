@@ -27,6 +27,7 @@ class MongoDB:
             self.client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri,
                                      serverSelectionTimeoutMS=5000)
             self.db = self.client["brownser"]
+            self.tasks_collection = self.db["tasks"]
             self.instances = self.db["instances"]
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
