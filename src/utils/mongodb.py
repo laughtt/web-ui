@@ -20,9 +20,10 @@ class MongoDB:
     def connect(self):
         """Connect to MongoDB using environment variables"""
         try:
-            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME')}:{os.getenv('MONGODB_ROOT_PASSWORD')}@mongodb:{os.getenv('MONGODB_PORT')}"
-            print(mongo_uri)
+            mongo_uri = f"mongodb://{os.getenv('MONGODB_ROOT_USERNAME')}:{os.getenv('MONGODB_ROOT_PASSWORD')}@mongodb:{os.getenv('MONGODB_PORT')}/?authSource=admin"
+            self.mongo_uri = mongo_uri
             # Create MongoDB client
+            print(mongo_uri)
             self.client = motor.motor_asyncio.AsyncIOMotorClient(mongo_uri,
                                      serverSelectionTimeoutMS=5000)
             self.db = self.client["brownser"]
@@ -86,6 +87,7 @@ class MongoDB:
         """
         if not self.is_connected():
             logger.warning(f"MongoDB not connected, skipping task storage for {task_id}")
+            logger.warning(f"MongoDB not connected, {self.mongo_uri}")
             return task_id
             
         try:
