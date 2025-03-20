@@ -684,7 +684,7 @@ async def get_task_result(task_id: str):
     """Get the result of a task"""
     task = await db.get_task(task_id)
     if task:
-        return task
+        return {"tash": str(task)}
     else:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
 
