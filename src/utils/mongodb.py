@@ -76,7 +76,7 @@ class MongoDB:
             logger.warning(f"Could not serialize object of type {type(data)}: {str(e)}")
             return f"<Unserializable object of type {type(data).__name__}>"
     
-    def store_task(self, task_id: str, task_type: str, config: Dict[str, Any]) -> str:
+    async def store_task(self, task_id: str, task_type: str, config: Dict[str, Any]) -> str:
         """
         Store a new task in the database
         
@@ -107,7 +107,7 @@ class MongoDB:
             }
             
             # Insert or update task
-            self.tasks_collection.update_one(
+            await self.tasks_collection.update_one(
                 {"task_id": task_id},
                 {"$set": task_doc},
                 upsert=True
@@ -118,7 +118,7 @@ class MongoDB:
             logger.error(f"Error storing task {task_id}: {str(e)}")
             return task_id
     
-    def update_task_status(self, task_id: str, status: str, result: Optional[Dict[str, Any]] = None, 
+    async def update_task_status(self, task_id: str, status: str, result: Optional[Dict[str, Any]] = None, 
                           errors: Optional[str] = None) -> bool:
         """
         Update the status and results of a task
@@ -150,7 +150,7 @@ class MongoDB:
             if errors is not None:
                 update_doc["errors"] = errors
             
-            update_result = self.tasks_collection.update_one(
+            update_result = await self.tasks_collection.update_one(
                 {"task_id": task_id},
                 {"$set": update_doc}
             )
@@ -182,7 +182,7 @@ class MongoDB:
             logger.error(f"Error retrieving task {task_id}: {str(e)}")
             return None
     
-    def get_recent_tasks(self, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_recent_tasks(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
         Get the most recent tasks
         
@@ -198,8 +198,8 @@ class MongoDB:
             return []
             
         try:
-            tasks = list(self.tasks_collection.find().sort("created_at", -1).limit(limit))
-            return tasks
+            tasks = await self.tasks_collection.find().sort("created_at", -1).limit(limit)
+            return list(tasks)
         except Exception as e:
             logger.error(f"Error retrieving recent tasks: {str(e)}")
             return []

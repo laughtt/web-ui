@@ -136,7 +136,7 @@ async def run_agent(config: AgentConfig, background_tasks: BackgroundTasks):
     config.llm_api_key = os.getenv("OPENAI_API_KEY", None)
     
     # Store task in MongoDB
-    db.store_task(task_id, "agent", config.dict())
+    await db.store_task(task_id, "agent", config.dict())
     
     background_tasks.add_task(
         run_browser_agent_task,
@@ -149,7 +149,7 @@ async def run_agent(config: AgentConfig, background_tasks: BackgroundTasks):
 @app.get("/agent-status/{task_id}")
 async def get_agent_status(task_id: str):
     """Get the status of a running agent task"""
-    task = db.get_task(task_id)
+    task = await db.get_task(task_id)
     if task:
         return {
             "task_id": task_id,
@@ -193,7 +193,7 @@ async def run_research(config: ResearchConfig, background_tasks: BackgroundTasks
     task_id = f"research_{os.urandom(4).hex()}"
     
     # Store task in MongoDB
-    db.store_task(task_id, "research", config.dict())
+    await db.store_task(task_id, "research", config.dict())
     
     background_tasks.add_task(
         run_research_task,
@@ -244,7 +244,7 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
     global _global_agent_state, _global_browser, _global_browser_context, _global_agent
     
     # Update task status to running
-    db.update_task_status(task_id, "running")
+    await db.update_task_status(task_id, "running")
     
     # Store task results (would be better in a proper task storage system)
     results = {
@@ -356,7 +356,7 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
         })
         
         # Update task in MongoDB
-        db.update_task_status(
+        await db.update_task_status(
             task_id, 
             "completed", 
             {
@@ -379,7 +379,7 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
         })
         
         # Update task in MongoDB with error
-        db.update_task_status(task_id, "failed", errors=error_details)
+        await db.update_task_status(task_id, "failed", errors=error_details)
         
     finally:
         _global_agent = None
@@ -614,7 +614,7 @@ async def run_research_task(task_id: str, config: ResearchConfig):
     global _global_agent_state
     
     # Update task status to running
-    db.update_task_status(task_id, "running")
+    await db.update_task_status(task_id, "running")
     
     results = {
         "task_id": task_id,
@@ -655,7 +655,7 @@ async def run_research_task(task_id: str, config: ResearchConfig):
         })
         
         # Update task in MongoDB
-        db.update_task_status(
+        await db.update_task_status(
             task_id, 
             "completed", 
             {
@@ -674,7 +674,7 @@ async def run_research_task(task_id: str, config: ResearchConfig):
         })
         
         # Update task in MongoDB with error
-        db.update_task_status(task_id, "failed", errors=error_details)
+        await db.update_task_status(task_id, "failed", errors=error_details)
     
     logger.info(f"Research task {task_id} completed with status: {results['status']}")
     return results
@@ -691,7 +691,7 @@ async def get_task_result(task_id: str):
 @app.get("/research-file/{task_id}")
 async def get_research_file(task_id: str):
     """Get the research file for a completed research task"""
-    task = db.get_task(task_id)
+    task = await db.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
         
@@ -852,7 +852,7 @@ async def websocket_agent(websocket: WebSocket):
         task_id = f"ws_task_{os.urandom(4).hex()}"
         
         # Store task in MongoDB
-        db.store_task(task_id, "agent", agent_config.dict())
+        await db.store_task(task_id, "agent", agent_config.dict())
         
         # Update client with task ID
         await websocket.send_json({
