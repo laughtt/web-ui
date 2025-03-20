@@ -771,30 +771,39 @@ async def websocket_agent(websocket: WebSocket):
     # Generate a unique client ID
     client_id = f"client_{os.urandom(4).hex()}"
     connected_websockets[client_id] = websocket
+    logger.info(f"🔌 New WebSocket connection established - Client ID: {client_id}")
     
     try:
         while True:  # Keep connection alive
             # Receive message
             data = await websocket.receive_text()
-            message = json.loads(data)
+            logger.info(f"📩 Received message from client {client_id}:")
+            logger.info(f"Raw message: {data}")
             
-            print(message)
+            message = json.loads(data)
+            logger.info(f"Parsed message: {json.dumps(message, indent=2)}")
+            
             # Handle different message types
             message_type = message.get("type", "")
+            logger.info(f"Message type: {message_type}")
             
             if message_type == "connection":
+                logger.info(f"👋 Processing connection message from client {client_id}")
                 # Just acknowledge the connection
-                await websocket.send_json({
+                response = {
                     "type": "connection_ack",
                     "data": {
                         "client_id": client_id,
                         "status": "connected"
                     },
                     "timestamp": datetime.now().isoformat() + "Z"
-                })
+                }
+                logger.info(f"✅ Sending connection acknowledgment: {json.dumps(response, indent=2)}")
+                await websocket.send_json(response)
                 continue
                 
             elif message_type == "create_task":
+                logger.info(f"🎯 Processing create_task message from client {client_id}")
                 # Extract task configuration
                 config_data = message.get("config", {})
                 
