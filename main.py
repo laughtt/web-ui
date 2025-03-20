@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 import json
 import traceback
 from datetime import datetime
+import time
+import ipaddress
+from src.utils.utils import repeat_every
 
 load_dotenv(override=True)
 
@@ -764,50 +767,103 @@ async def shutdown_event():
 # Store connected WebSocket clients
 connected_websockets = {}
 
+# Store sessions by both session_id and IP
+client_sessions: Dict[str, dict] = {}
+ip_to_session: Dict[str, str] = {}
+
+def get_client_ip(request: Request) -> str:
+    """Get the real client IP, handling proxies and forwards"""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        # Get the first IP in case of multiple forwards
+        return forwarded.split(",")[0].strip()
+    
+    # Get direct client IP
+    client_host = request.client.host
+    # Handle both IPv4 and IPv6
+    try:
+        ip = ipaddress.ip_address(client_host)
+        return str(ip)
+    except ValueError:
+        return client_host
+
 @app.websocket("/agent/ws")
 async def websocket_agent(websocket: WebSocket):
     await websocket.accept()
     
-    # Generate a unique client ID
-    client_id = f"client_{os.urandom(4).hex()}"
-    connected_websockets[client_id] = websocket
-    client_config = {}  # Store client configuration
-    
-    logger.info(f"🔌 New WebSocket connection established - Client ID: {client_id}")
+    # Get client IP
+    client_ip = get_client_ip(websocket)
+    logger.info(f"Connection attempt from IP: {client_ip}")
     
     try:
-        while True:  # Keep connection alive
-            # Receive message
+        # Check for existing session by IP
+        session_id = ip_to_session.get(client_ip)
+        
+        if session_id and session_id in client_sessions:
+            # Reconnection with existing session
+            client_id = client_sessions[session_id]["client_id"]
+            client_config = client_sessions[session_id]["config"]
+            logger.info(f"🔄 Reconnected client {client_id} from IP {client_ip} with session {session_id}")
+        else:
+            # New connection
+            client_id = f"client_{os.urandom(4).hex()}"
+            session_id = f"session_{os.urandom(4).hex()}"
+            
+            # Store new session
+            client_sessions[session_id] = {
+                "client_id": client_id,
+                "ip_address": client_ip,
+                "config": {},
+                "last_active": time.time(),
+                "status": "connected",
+                "connection_history": [{
+                    "timestamp": time.time(),
+                    "event": "initial_connection",
+                    "ip": client_ip
+                }]
+            }
+            
+            # Map IP to session
+            ip_to_session[client_ip] = session_id
+            logger.info(f"🔌 New connection - Client ID: {client_id}, Session ID: {session_id}, IP: {client_ip}")
+
+        connected_websockets[client_id] = websocket
+        
+        # Update session status and history
+        if session_id in client_sessions:
+            client_sessions[session_id]["status"] = "connected"
+            client_sessions[session_id]["last_active"] = time.time()
+            client_sessions[session_id]["connection_history"].append({
+                "timestamp": time.time(),
+                "event": "reconnection" if session_id in client_sessions else "initial_connection",
+                "ip": client_ip
+            })
+
+        while True:
             data = await websocket.receive_text()
-            logger.info(f"📩 Received message from client {client_id}:")
-            logger.info(f"Raw message: {data}")
+            client_sessions[session_id]["last_active"] = time.time()
             
             message = json.loads(data)
-            logger.info(f"Parsed message: {json.dumps(message, indent=2)}")
-            
-            # Handle different message types
             message_type = message.get("type", "")
-            logger.info(f"Message type: {message_type}")
             
             if message_type == "connection_ack":
-                logger.info(f"👋 Processing connection acknowledgment from client {client_id}")
-                # Store the client configuration
+                # Store or update the client configuration
                 client_config = message.get("config", {})
-                logger.info(f"📝 Stored client configuration: {json.dumps(client_config, indent=2)}")
+                client_sessions[session_id]["config"] = client_config
                 
-                # Send confirmation
+                # Send confirmation with session details
                 response = {
                     "type": "connection_confirmed",
                     "data": {
                         "client_id": client_id,
+                        "session_id": session_id,
+                        "ip_address": client_ip,
                         "status": "ready",
-                        "message": f"Connected and ready. Instance: {client_config.get('add_infos', 'unknown')}"
+                        "message": f"Connected from IP {client_ip}. Instance: {client_config.get('add_infos', 'unknown')}"
                     },
                     "timestamp": datetime.now().isoformat() + "Z"
                 }
-                logger.info(f"✅ Sending connection confirmation: {json.dumps(response, indent=2)}")
                 await websocket.send_json(response)
-                continue
                 
             elif message_type == "create_task":
                 logger.info(f"🎯 Processing create_task message from client {client_id}")
@@ -953,22 +1009,57 @@ async def websocket_agent(websocket: WebSocket):
                 })
                 
     except WebSocketDisconnect:
-        logger.info(f"WebSocket client {client_id} disconnected")
-    except Exception as e:
-        logger.error(f"WebSocket error: {str(e)}")
-        try:
-            await websocket.send_json({
-                "type": "error",
-                "error": str(e),
-                "details": traceback.format_exc(),
-                "timestamp": datetime.now().isoformat() + "Z"
+        logger.info(f"WebSocket client {client_id} disconnected - Session {session_id} preserved for IP {client_ip}")
+        if session_id in client_sessions:
+            client_sessions[session_id].update({
+                "status": "disconnected",
+                "last_disconnect": time.time()
             })
-        except:
-            pass
+            client_sessions[session_id]["connection_history"].append({
+                "timestamp": time.time(),
+                "event": "disconnection",
+                "ip": client_ip
+            })
+            
+    except Exception as e:
+        logger.error(f"WebSocket error for IP {client_ip}: {str(e)}")
+        if session_id in client_sessions:
+            client_sessions[session_id].update({
+                "status": "error",
+                "last_error": str(e),
+                "last_error_time": time.time()
+            })
+            
     finally:
-        # Clean up
         if client_id in connected_websockets:
             del connected_websockets[client_id]
+
+# Add cleanup task for old sessions
+@app.on_event("startup")
+@repeat_every(seconds=3600)  # Run every hour
+async def cleanup_old_sessions():
+    """Remove sessions that have been inactive for more than 24 hours"""
+    current_time = time.time()
+    session_timeout = 24 * 3600  # 24 hours in seconds
+    
+    sessions_to_remove = []
+    ips_to_remove = []
+    
+    for session_id, session_data in client_sessions.items():
+        if current_time - session_data["last_active"] > session_timeout:
+            sessions_to_remove.append(session_id)
+            if "ip_address" in session_data:
+                ips_to_remove.append(session_data["ip_address"])
+                
+    for session_id in sessions_to_remove:
+        del client_sessions[session_id]
+        
+    for ip in ips_to_remove:
+        if ip in ip_to_session:
+            del ip_to_session[ip]
+            
+    if sessions_to_remove:
+        logger.info(f"Cleaned up {len(sessions_to_remove)} inactive sessions")
 
 # Entry point for running the app
 if __name__ == "__main__":
