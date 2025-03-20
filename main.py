@@ -778,6 +778,7 @@ async def websocket_agent(websocket: WebSocket):
             data = await websocket.receive_text()
             message = json.loads(data)
             
+            print(message)
             # Handle different message types
             message_type = message.get("type", "")
             
