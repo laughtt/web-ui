@@ -160,7 +160,7 @@ class MongoDB:
             logger.error(f"Error updating task {task_id}: {str(e)}")
             return False
     
-    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+    async def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
         """
         Retrieve a task by its ID
         
@@ -176,7 +176,7 @@ class MongoDB:
             return None
             
         try:
-            task = self.tasks_collection.find_one({"task_id": task_id})
+            task = await self.tasks_collection.find_one({"task_id": task_id})
             return task
         except Exception as e:
             logger.error(f"Error retrieving task {task_id}: {str(e)}")
