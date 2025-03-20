@@ -798,7 +798,7 @@ async def websocket_agent(websocket: WebSocket):
                 config_data = message.get("config", {})
                 
                 # Extract task details
-                task = config_data.get("task", "Navigate to example.com and summarize the main content of the page.")
+                task = config_data.get("data", {}).get("command", "")
                 add_infos = config_data.get("add_infos", "")
                 
                 # Extract config settings or use defaults
