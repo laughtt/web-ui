@@ -942,7 +942,11 @@ async def websocket_agent(websocket: WebSocket):
                     },
                     "timestamp": datetime.now().isoformat() + "Z"
                 })
-                
+            elif message_type == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                    "timestamp": datetime.now().isoformat() + "Z"
+                })
             else:
                 await websocket.send_json({
                     "type": "error",
