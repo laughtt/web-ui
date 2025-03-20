@@ -771,6 +771,8 @@ async def websocket_agent(websocket: WebSocket):
     # Generate a unique client ID
     client_id = f"client_{os.urandom(4).hex()}"
     connected_websockets[client_id] = websocket
+    client_config = {}  # Store client configuration
+    
     logger.info(f"🔌 New WebSocket connection established - Client ID: {client_id}")
     
     try:
@@ -787,28 +789,33 @@ async def websocket_agent(websocket: WebSocket):
             message_type = message.get("type", "")
             logger.info(f"Message type: {message_type}")
             
-            if message_type == "connection":
-                logger.info(f"👋 Processing connection message from client {client_id}")
-                # Just acknowledge the connection
+            if message_type == "connection_ack":
+                logger.info(f"👋 Processing connection acknowledgment from client {client_id}")
+                # Store the client configuration
+                client_config = message.get("config", {})
+                logger.info(f"📝 Stored client configuration: {json.dumps(client_config, indent=2)}")
+                
+                # Send confirmation
                 response = {
-                    "type": "connection_ack",
+                    "type": "connection_confirmed",
                     "data": {
                         "client_id": client_id,
-                        "status": "connected"
+                        "status": "ready",
+                        "message": f"Connected and ready. Instance: {client_config.get('add_infos', 'unknown')}"
                     },
                     "timestamp": datetime.now().isoformat() + "Z"
                 }
-                logger.info(f"✅ Sending connection acknowledgment: {json.dumps(response, indent=2)}")
+                logger.info(f"✅ Sending connection confirmation: {json.dumps(response, indent=2)}")
                 await websocket.send_json(response)
                 continue
                 
             elif message_type == "create_task":
                 logger.info(f"🎯 Processing create_task message from client {client_id}")
-                # Extract task configuration
-                config_data = message.get("config", {})
+                # Use stored configuration if available, otherwise use message config
+                config_data = message.get("config", client_config)
                 
                 # Extract task details
-                task = config_data.get("data", {}).get("command", "")
+                task = config_data.get("task", {})
                 add_infos = config_data.get("add_infos", "")
                 
                 # Extract config settings or use defaults
