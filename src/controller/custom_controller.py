@@ -1,7 +1,7 @@
 import pdb
 
 import pyperclip
-from typing import Optional, Type
+from typing import Optional, Type, Dict, Any
 from pydantic import BaseModel
 from browser_use.agent.views import ActionResult
 from browser_use.browser.context import BrowserContext
@@ -20,6 +20,7 @@ from browser_use.controller.views import (
     SwitchTabAction,
 )
 import logging
+from src.utils.tools import scan_url_with_jina
 
 logger = logging.getLogger(__name__)
 
@@ -47,3 +48,38 @@ class CustomController(Controller):
             await page.keyboard.type(text)
 
             return ActionResult(extracted_content=text)
+
+        # Register the Jina scan URL action
+        @self.registry.register(
+            name="scan_url_with_jina",
+            description="Scans a URL using Jina AI to extract and summarize its content. Useful for quickly understanding webpage content without navigating to it.",
+            parameters={
+                "url": {
+                    "type": "string",
+                    "description": "The URL to scan (e.g., 'https://example.com')"
+                },
+                "api_key": {
+                    "type": "string",
+                    "description": "Optional: Custom Jina API key to use",
+                    "required": False
+                }
+            },
+            returns={
+                "type": "string",
+                "description": "The extracted and summarized content from the URL in markdown format"
+            },
+            include_in_memory=True
+        )
+        async def scan_url_with_jina_action(
+            url: str,
+            api_key: Optional[str] = None,
+            **kwargs
+        ) -> Dict[str, Any]:
+            """Scan a URL using Jina AI and return the extracted content."""
+            result = scan_url_with_jina(url, api_key)
+            return {
+                "extracted_content": result,
+                "include_in_memory": True,
+                "error": None,
+                "is_done": False
+            }
