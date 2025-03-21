@@ -54,9 +54,4 @@ class CustomController(Controller):
         async def extract_content(url: str):
             """Extract information from a webpage using the url"""
             result = scan_url_with_jina(url)
-            return {
-                "extracted_content": result,
-                "include_in_memory": True,
-                "error": None,
-                "is_done": False
-            }
+            return result

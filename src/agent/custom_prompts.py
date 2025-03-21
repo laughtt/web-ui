@@ -84,7 +84,7 @@ class CustomSystemPrompt(SystemPrompt):
    - only use multiple actions if it makes sense. 
 
 9. Extraction:
-    - If your task is to find information or do research - call extract_content on the specific pages to get and store the information.
+    - If your task is to find information or do research - call extract_content on the specific pages to get and store the information. (do not use with urls that containg google.com)
 
 """
         text += f"   - use maximum {self.max_actions_per_step} actions per sequence"
