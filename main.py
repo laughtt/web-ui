@@ -957,6 +957,22 @@ async def websocket_agent(websocket: WebSocket):
                                 "history_file": history_file
                             }
                         )
+                    except asyncio.CancelledError:
+                        logger.info(f"Task {task_id} was cancelled")
+                        
+                        # Send cancellation notification to client
+                        await send_ws_message(websocket, {
+                            "type": "status",
+                            "data": {
+                                "status": "cancelled",
+                                "task_id": task_id,
+                                "message": "Task was cancelled during execution"
+                            },
+                            "timestamp": datetime.now().isoformat() + "Z"
+                        })
+                        
+                        # Clean up resources if needed
+                        
                     except Exception as e:
                         error_details = str(e) + "\n" + traceback.format_exc()
                         logger.error(f"Error in agent background task: {error_details}")
@@ -988,6 +1004,70 @@ async def websocket_agent(websocket: WebSocket):
                     "type": "pong",
                     "timestamp": datetime.now().isoformat() + "Z"
                 })
+            elif message_type == "stop_task":
+                logger.info(f"🛑 Processing stop_task message from client {client_id}")
+                
+                # Get the task ID to stop
+                task_id = message.get("task_id", "")
+                
+                if not task_id:
+                    await websocket.send_json({
+                        "type": "error",
+                        "data": {
+                            "message": "No task_id provided"
+                        },
+                        "timestamp": datetime.now().isoformat() + "Z"
+                    })
+                    continue
+                
+                # Check if the task exists
+                if hasattr(websocket, "background_tasks") and task_id in websocket.background_tasks:
+                    # Get the task
+                    task = websocket.background_tasks[task_id]
+                    
+                    # Cancel the task if it's not already done
+                    if not task.done():
+                        task.cancel()
+                        
+                        # Update task status in database
+                        await db.update_task_status(task_id, "cancelled", {"message": "Task cancelled by user"})
+                        
+                        # Update global agent state to request stop
+                        _global_agent_state.request_stop()
+                        
+                        # If we have a global agent, tell it to stop
+                        if _global_agent:
+                            _global_agent.stop()
+                        
+                        await websocket.send_json({
+                            "type": "status",
+                            "data": {
+                                "status": "cancelled",
+                                "task_id": task_id,
+                                "message": "Task has been cancelled"
+                            },
+                            "timestamp": datetime.now().isoformat() + "Z"
+                        })
+                    else:
+                        # Task already completed or failed
+                        await websocket.send_json({
+                            "type": "status",
+                            "data": {
+                                "status": "already_done",
+                                "task_id": task_id,
+                                "message": "Task already completed or failed"
+                            },
+                            "timestamp": datetime.now().isoformat() + "Z"
+                        })
+                else:
+                    # Task not found
+                    await websocket.send_json({
+                        "type": "error",
+                        "data": {
+                            "message": f"Task {task_id} not found"
+                        },
+                        "timestamp": datetime.now().isoformat() + "Z"
+                    })
             else:
                 await websocket.send_json({
                     "type": "error",
