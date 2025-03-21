@@ -901,46 +901,88 @@ async def websocket_agent(websocket: WebSocket):
                     "timestamp": datetime.now().isoformat() + "Z"
                 })
                 
-                # Run the agent
-                result = await run_custom_agent(
-                    llm=utils.get_llm_model(
-                        provider=agent_config.llm_provider,
-                        model_name=agent_config.llm_model_name,
-                        num_ctx=agent_config.llm_num_ctx,
-                        temperature=agent_config.llm_temperature,
-                        base_url=agent_config.llm_base_url,
-                        api_key=agent_config.llm_api_key,
-                    ),
-                    use_own_browser=agent_config.use_own_browser,
-                    keep_browser_open=agent_config.keep_browser_open,
-                    headless=agent_config.headless,
-                    disable_security=agent_config.disable_security,
-                    window_w=agent_config.window_w,
-                    window_h=agent_config.window_h,
-                    save_recording_path=agent_config.save_recording_path if agent_config.enable_recording else None,
-                    save_agent_history_path=agent_config.save_agent_history_path,
-                    save_trace_path=agent_config.save_trace_path,
-                    task=task,
-                    add_infos=add_infos,
-                    max_steps=agent_config.max_steps,
-                    use_vision=agent_config.use_vision,
-                    max_actions_per_step=agent_config.max_actions_per_step,
-                    tool_calling_method=agent_config.tool_calling_method,
-                    chrome_cdp=agent_config.chrome_cdp,
-                    register_new_step_callback=ws_tool_usage_callback
-                )
+                # Create a new function for the background task
+                async def run_agent_background_task():
+                    try:
+                        # Run the agent
+                        result = await run_custom_agent(
+                            llm=utils.get_llm_model(
+                                provider=agent_config.llm_provider,
+                                model_name=agent_config.llm_model_name,
+                                num_ctx=agent_config.llm_num_ctx,
+                                temperature=agent_config.llm_temperature,
+                                base_url=agent_config.llm_base_url,
+                                api_key=agent_config.llm_api_key,
+                            ),
+                            use_own_browser=agent_config.use_own_browser,
+                            keep_browser_open=agent_config.keep_browser_open,
+                            headless=agent_config.headless,
+                            disable_security=agent_config.disable_security,
+                            window_w=agent_config.window_w,
+                            window_h=agent_config.window_h,
+                            save_recording_path=agent_config.save_recording_path if agent_config.enable_recording else None,
+                            save_agent_history_path=agent_config.save_agent_history_path,
+                            save_trace_path=agent_config.save_trace_path,
+                            task=task,
+                            add_infos=add_infos,
+                            max_steps=agent_config.max_steps,
+                            use_vision=agent_config.use_vision,
+                            max_actions_per_step=agent_config.max_actions_per_step,
+                            tool_calling_method=agent_config.tool_calling_method,
+                            chrome_cdp=agent_config.chrome_cdp,
+                            register_new_step_callback=ws_tool_usage_callback
+                        )
+                        
+                        # Send final results
+                        final_result, errors, model_actions, model_thoughts, trace_file, history_file = result
+                        
+                        await send_ws_message(websocket, {
+                            "type": "result",
+                            "data": {
+                                "final_result": final_result,
+                                "errors": errors,
+                            },
+                            "timestamp": datetime.now().isoformat() + "Z"
+                        })
+                        
+                        # Update task in MongoDB
+                        await db.update_task_status(
+                            task_id, 
+                            "completed", 
+                            {
+                                "final_result": final_result,
+                                "model_actions": model_actions,
+                                "model_thoughts": model_thoughts,
+                                "trace_file": trace_file,
+                                "history_file": history_file
+                            }
+                        )
+                    except Exception as e:
+                        error_details = str(e) + "\n" + traceback.format_exc()
+                        logger.error(f"Error in agent background task: {error_details}")
+                        
+                        # Send error message to the client
+                        await send_ws_message(websocket, {
+                            "type": "error",
+                            "data": {
+                                "error": str(e),
+                                "details": error_details
+                            },
+                            "timestamp": datetime.now().isoformat() + "Z"
+                        })
+                        
+                        # Update task in MongoDB with error
+                        await db.update_task_status(task_id, "failed", errors=error_details)
                 
-                # Send final results
-                final_result, errors, model_actions, model_thoughts, trace_file, history_file = result
+                # Store the background task in a dictionary
+                if not hasattr(websocket, "background_tasks"):
+                    websocket.background_tasks = {}
                 
-                await websocket.send_json({
-                    "type": "result",
-                    "data": {
-                        "final_result": final_result,
-                        "errors": errors,
-                    },
-                    "timestamp": datetime.now().isoformat() + "Z"
-                })
+                # Launch the background task
+                background_task = asyncio.create_task(run_agent_background_task())
+                websocket.background_tasks[task_id] = background_task
+                
+                # Continue handling WebSocket messages
             elif message_type == "ping":
                 await websocket.send_json({
                     "type": "pong",
