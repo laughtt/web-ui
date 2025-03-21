@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 import json
 import traceback
 from datetime import datetime
+import argparse
 
 load_dotenv(override=True)
 
@@ -373,7 +374,6 @@ async def run_browser_agent_task(task_id: str, config: AgentConfig):
         )
         
     except Exception as e:
-        import traceback
         error_details = str(e) + "\n" + traceback.format_exc()
         logger.error(f"Error in agent task {task_id}: {error_details}")
         results.update({
@@ -484,7 +484,6 @@ async def run_org_agent(
 
         return final_result, errors, model_actions, model_thoughts, trace_file.get('.zip'), history_file
     except Exception as e:
-        import traceback
         traceback.print_exc()
         errors = str(e) + "\n" + traceback.format_exc()
         return '', errors, '', '', None, None
@@ -596,7 +595,6 @@ async def run_custom_agent(
 
         return final_result, errors, model_actions, model_thoughts, trace_file.get('.zip'), history_file
     except Exception as e:
-        import traceback
         traceback.print_exc()
         errors = str(e) + "\n" + traceback.format_exc()
         return '', errors, '', '', None, None
@@ -668,7 +666,6 @@ async def run_research_task(task_id: str, config: ResearchConfig):
         )
         
     except Exception as e:
-        import traceback
         error_details = str(e) + "\n" + traceback.format_exc()
         logger.error(f"Error in research task {task_id}: {error_details}")
         results.update({
@@ -722,7 +719,6 @@ async def add_error_handling(request: Request, call_next):
     try:
         return await call_next(request)
     except Exception as e:
-        import traceback
         error_detail = str(e) + "\n" + traceback.format_exc()
         logger.error(f"Unhandled exception: {error_detail}")
         return JSONResponse(
@@ -1207,7 +1203,6 @@ async def shutdown_ssh_terminals():
 
 # Entry point for running the app
 if __name__ == "__main__":
-    import argparse
     
     parser = argparse.ArgumentParser(description="Browser Agent API")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
