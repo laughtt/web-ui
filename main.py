@@ -1030,11 +1030,9 @@ async def websocket_local_terminal(websocket: WebSocket):
                         working_dir=working_dir
                     )
                     
-                    # Set up the callback to stream output
-                    def ws_callback(output):
-                        asyncio.create_task(output_callback(output))
-                    
-                    connection.set_output_callback(ws_callback)
+                    # Set up the callback directly
+                    # No need for an intermediate function
+                    connection.set_output_callback(output_callback)
                     
                     # Send success response
                     await websocket.send_json({

@@ -104,9 +104,19 @@ class LocalConnection:
         self._process = None
         self._reading_thread = None
         self._stop_reading = threading.Event()
+        # Store the event loop for callbacks
+        self._loop = None
         
     def connect(self) -> None:
         """Initialize the local connection."""
+        # Store the current event loop
+        try:
+            self._loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # If there's no event loop, we're probably in a thread
+            # This shouldn't happen when called from the websocket handler
+            self._loop = None
+            
         # Create a shell process
         shell_command = 'bash' if os.name != 'nt' else 'cmd.exe'
         
@@ -165,14 +175,21 @@ class LocalConnection:
                         self.terminal_state.process_output(line)
                         
                         # Notify callback if set
-                        if self._output_callback:
-                            self._output_callback(line)
+                        if self._output_callback and self._loop:
+                            # Use run_coroutine_threadsafe instead of create_task
+                            asyncio.run_coroutine_threadsafe(
+                                self._output_callback(line), 
+                                self._loop
+                            )
                     else:
                         # Process may have ended
                         time.sleep(0.1)
                 except Exception as e:
-                    if self._output_callback:
-                        self._output_callback(f"Error reading output: {str(e)}\n")
+                    if self._output_callback and self._loop:
+                        asyncio.run_coroutine_threadsafe(
+                            self._output_callback(f"Error reading output: {str(e)}\n"),
+                            self._loop
+                        )
                     time.sleep(0.1)
             else:
                 time.sleep(0.1)
