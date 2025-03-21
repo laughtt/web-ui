@@ -53,5 +53,10 @@ class CustomController(Controller):
         @self.registry.action("Extract information from a webpage using the url")
         async def extract_content(url: str):
             """Extract information from a webpage using the url"""
-            result = scan_url_with_jina(url)
-            return result
+            try:
+                if "google.com" in url:
+                    raise ValueError("Google.com is not allowed")
+                result = scan_url_with_jina(url)
+                return ActionResult(extracted_content=result)
+            except Exception as e:
+                return ActionResult(extracted_content=f"Error: {e}")
