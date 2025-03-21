@@ -1005,69 +1005,54 @@ async def websocket_agent(websocket: WebSocket):
                     "timestamp": datetime.now().isoformat() + "Z"
                 })
             elif message_type == "stop_task":
-                logger.info(f"🛑 Processing stop_task message from client {client_id}")
+                logger.info(f"🛑 Processing stop_all_tasks message from client {client_id}")
                 
-                # Get the task ID to stop
-                task_id = message.get("task_id", "")
-                
-                if not task_id:
+                # Check if there are any tasks
+                if not hasattr(websocket, "background_tasks") or not websocket.background_tasks:
                     await websocket.send_json({
-                        "type": "error",
+                        "type": "status",
                         "data": {
-                            "message": "No task_id provided"
+                            "status": "no_tasks",
+                            "message": "No active tasks to cancel"
                         },
                         "timestamp": datetime.now().isoformat() + "Z"
                     })
                     continue
                 
-                # Check if the task exists
-                if hasattr(websocket, "background_tasks") and task_id in websocket.background_tasks:
-                    # Get the task
-                    task = websocket.background_tasks[task_id]
-                    
-                    # Cancel the task if it's not already done
+                # Track cancelled tasks
+                cancelled_tasks = []
+                already_done_tasks = []
+                
+                # Cancel all tasks
+                for task_id, task in list(websocket.background_tasks.items()):
                     if not task.done():
                         task.cancel()
+                        cancelled_tasks.append(task_id)
                         
                         # Update task status in database
                         await db.update_task_status(task_id, "cancelled", {"message": "Task cancelled by user"})
-                        
-                        # Update global agent state to request stop
-                        _global_agent_state.request_stop()
-                        
-                        # If we have a global agent, tell it to stop
-                        if _global_agent:
-                            _global_agent.stop()
-                        
-                        await websocket.send_json({
-                            "type": "status",
-                            "data": {
-                                "status": "cancelled",
-                                "task_id": task_id,
-                                "message": "Task has been cancelled"
-                            },
-                            "timestamp": datetime.now().isoformat() + "Z"
-                        })
                     else:
-                        # Task already completed or failed
-                        await websocket.send_json({
-                            "type": "status",
-                            "data": {
-                                "status": "already_done",
-                                "task_id": task_id,
-                                "message": "Task already completed or failed"
-                            },
-                            "timestamp": datetime.now().isoformat() + "Z"
-                        })
-                else:
-                    # Task not found
-                    await websocket.send_json({
-                        "type": "error",
-                        "data": {
-                            "message": f"Task {task_id} not found"
-                        },
-                        "timestamp": datetime.now().isoformat() + "Z"
-                    })
+                        already_done_tasks.append(task_id)
+                
+                # Update global agent state to request stop regardless of which task is running
+                _global_agent_state.request_stop()
+                
+                # If we have a global agent, tell it to stop
+                if _global_agent:
+                    _global_agent.stop()
+                
+                # Send status response with details of what was cancelled
+                await websocket.send_json({
+                    "type": "status",
+                    "data": {
+                        "status": "tasks_cancelled",
+                        "cancelled_tasks": cancelled_tasks,
+                        "already_done_tasks": already_done_tasks,
+                        "message": f"Cancelled {len(cancelled_tasks)} tasks, {len(already_done_tasks)} were already completed"
+                    },
+                    "timestamp": datetime.now().isoformat() + "Z"
+                })
+            
             else:
                 await websocket.send_json({
                     "type": "error",
