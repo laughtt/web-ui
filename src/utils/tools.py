@@ -10,7 +10,6 @@ def scan_url_with_jina(url):
     
     Args:
         url (str): The URL to scan
-        api_key (str, optional): Jina API key. If not provided, uses the default key.
         
     Returns:
         str: The extracted content in markdown format
