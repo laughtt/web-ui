@@ -37,7 +37,7 @@ from src.utils.utils import get_latest_files, capture_screenshot
 from src.utils.mongodb import db
 
 # Import the Local Terminal module instead of SSH Terminal
-from src.ssh.local_terminal import LocalTerminal, LocalConnection
+from src.ssh.ssh_terminal import LocalTerminal, LocalConnection
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
