@@ -4,7 +4,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-def scan_url_with_jina(url, api_key=None):
+def scan_url_with_jina(url):
     """
     Scan a URL using Jina AI's reader service and return the extracted content.
     
@@ -15,8 +15,7 @@ def scan_url_with_jina(url, api_key=None):
     Returns:
         str: The extracted content in markdown format
     """
-    if not api_key:
-        api_key = os.environ.get("JINA_API_KEY", "jina_10f654635d4f494cac364015f93a91e8HtmMOkmrYcH_SebdNsI3_lhyVJBx")
+    api_key = os.environ.get("JINA_API_KEY", "jina_10f654635d4f494cac364015f93a91e8HtmMOkmrYcH_SebdNsI3_lhyVJBx")
     
     headers = {
         'Accept': 'text/event-stream',

@@ -50,33 +50,13 @@ class CustomController(Controller):
             return ActionResult(extracted_content=text)
 
         # Register the Jina scan URL action
-        @self.registry.register(
-            name="scan_url_with_jina",
-            description="Scans a URL using Jina AI to extract and summarize its content. Useful for quickly understanding webpage content without navigating to it.",
-            parameters={
-                "url": {
-                    "type": "string",
-                    "description": "The URL to scan (e.g., 'https://example.com')"
-                },
-                "api_key": {
-                    "type": "string",
-                    "description": "Optional: Custom Jina API key to use",
-                    "required": False
-                }
-            },
-            returns={
-                "type": "string",
-                "description": "The extracted and summarized content from the URL in markdown format"
-            },
-            include_in_memory=True
-        )
+        @self.registry.action("Scans a URL using Jina AI to extract and summarize its content. Useful for quickly understanding webpage content without navigating to it.")
         async def scan_url_with_jina_action(
             url: str,
-            api_key: Optional[str] = None,
             **kwargs
         ) -> Dict[str, Any]:
             """Scan a URL using Jina AI and return the extracted content."""
-            result = scan_url_with_jina(url, api_key)
+            result = scan_url_with_jina(url)
             return {
                 "extracted_content": result,
                 "include_in_memory": True,
