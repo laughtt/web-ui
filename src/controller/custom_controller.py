@@ -50,9 +50,9 @@ class CustomController(Controller):
             return ActionResult(extracted_content=text)
 
         # Register the Jina scan URL action
-        @self.registry.action("Scans a URL using Jina AI to extract and summarize its content. Useful for quickly understanding webpage content without navigating to it.")
-        async def scan_url_with_jina_action(url: str):
-            """Scan a URL using Jina AI and return the extracted content."""
+        @self.registry.action("Extract information from a webpage using the url")
+        async def extract_content(url: str):
+            """Extract information from a webpage using the url"""
             result = scan_url_with_jina(url)
             return {
                 "extracted_content": result,
