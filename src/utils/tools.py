@@ -20,7 +20,6 @@ def scan_url_with_jina(url):
         'Accept': 'text/event-stream',
         'Authorization': f'Bearer {api_key}',
         'X-Engine': 'browser',
-        'X-Respond-With': 'readerlm-v2',
         'X-Return-Format': 'markdown'
     }
     

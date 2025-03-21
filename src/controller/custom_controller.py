@@ -55,8 +55,8 @@ class CustomController(Controller):
             """Extract information from a webpage using the url"""
             try:
                 if "google.com" in url:
-                    raise ValueError("Google.com is not allowed")
+                    return ActionResult(extracted_content="Google.com is not allowed")
                 result = scan_url_with_jina(url)
-                return ActionResult(extracted_content=result)
+                return str(result)
             except Exception as e:
                 return ActionResult(extracted_content=f"Error: {e}")
