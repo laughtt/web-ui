@@ -36,8 +36,8 @@ from src.utils.utils import get_latest_files, capture_screenshot
 # Import the MongoDB module
 from src.utils.mongodb import db
 
-# Import the SSH Terminal module
-from src.ssh.ssh_terminal import SSHTerminal, SSHConnection
+# Import the Local Terminal module instead of SSH Terminal
+from src.ssh.local_terminal import LocalTerminal, LocalConnection
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -973,18 +973,18 @@ async def websocket_agent(websocket: WebSocket):
         if client_id in connected_websockets:
             del connected_websockets[client_id]
 
-# Store SSH terminal connections by client ID
-ssh_terminals = {}
+# Store terminal connections by client ID
+local_terminals = {}
 
 @app.websocket("/ssh/ws")
-async def websocket_ssh_terminal(websocket: WebSocket):
+async def websocket_local_terminal(websocket: WebSocket):
     await websocket.accept()
     
     # Generate a unique client ID
-    client_id = f"ssh_{os.urandom(4).hex()}"
-    ssh_terminals[client_id] = SSHTerminal()
+    client_id = f"term_{os.urandom(4).hex()}"
+    local_terminals[client_id] = LocalTerminal()
     
-    logger.info(f"🔌 New SSH Terminal WebSocket connection established - Client ID: {client_id}")
+    logger.info(f"🔌 New Terminal WebSocket connection established - Client ID: {client_id}")
     
     try:
         # Send initial connection confirmation
@@ -993,7 +993,7 @@ async def websocket_ssh_terminal(websocket: WebSocket):
             "data": {
                 "client_id": client_id,
                 "status": "ready",
-                "message": "SSH Terminal connection established"
+                "message": "Terminal connection established"
             },
             "timestamp": datetime.now().isoformat() + "Z"
         })
@@ -1001,13 +1001,13 @@ async def websocket_ssh_terminal(websocket: WebSocket):
         while True:  # Keep connection alive
             # Receive message
             data = await websocket.receive_text()
-            logger.info(f"📩 Received SSH message from client {client_id}")
+            logger.info(f"📩 Received terminal message from client {client_id}")
             
             message = json.loads(data)
             message_type = message.get("type", "")
             
             if message_type == "connect":
-                # Connect to SSH server
+                # Create a new local terminal session
                 connection_name = message.get("connection_name", f"conn_{os.urandom(4).hex()}")
                 connection_params = message.get("connection", {})
                 
@@ -1023,14 +1023,11 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                             "timestamp": datetime.now().isoformat() + "Z"
                         })
                     
-                    # Connect to SSH server
-                    connection = ssh_terminals[client_id].connect(
+                    # Start a local terminal session
+                    working_dir = connection_params.get("working_dir", None)
+                    connection = local_terminals[client_id].connect(
                         name=connection_name,
-                        host=connection_params.get("host", ""),
-                        username=connection_params.get("username", ""),
-                        password=connection_params.get("password"),
-                        key_filename=connection_params.get("key_filename"),
-                        port=connection_params.get("port", 22)
+                        working_dir=working_dir
                     )
                     
                     # Set up the callback to stream output
@@ -1041,11 +1038,11 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                     
                     # Send success response
                     await websocket.send_json({
-                        "type": "ssh_connected",
+                        "type": "terminal_connected",
                         "data": {
                             "connection_name": connection_name,
                             "status": "connected",
-                            "message": f"Connected to {connection_params.get('host')}"
+                            "message": f"Terminal session started"
                         },
                         "timestamp": datetime.now().isoformat() + "Z"
                     })
@@ -1053,10 +1050,10 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                 except Exception as e:
                     # Send error response
                     error_details = str(e) + "\n" + traceback.format_exc()
-                    logger.error(f"SSH connection error: {error_details}")
+                    logger.error(f"Terminal connection error: {error_details}")
                     
                     await websocket.send_json({
-                        "type": "ssh_error",
+                        "type": "terminal_error",
                         "data": {
                             "connection_name": connection_name,
                             "error": str(e),
@@ -1072,7 +1069,7 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                 
                 try:
                     # Execute the command
-                    ssh_terminals[client_id].execute_command(connection_name, command)
+                    local_terminals[client_id].execute_command(connection_name, command)
                     
                     # Command sent confirmation
                     await websocket.send_json({
@@ -1087,10 +1084,10 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                 except Exception as e:
                     # Send error response
                     error_details = str(e)
-                    logger.error(f"SSH command error: {error_details}")
+                    logger.error(f"Terminal command error: {error_details}")
                     
                     await websocket.send_json({
-                        "type": "ssh_error",
+                        "type": "terminal_error",
                         "data": {
                             "connection_name": connection_name,
                             "command": command,
@@ -1099,12 +1096,13 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                         "timestamp": datetime.now().isoformat() + "Z"
                     })
             
+            # Rest of the WebSocket endpoint remains the same, just changing ssh_ prefixes to terminal_
             elif message_type == "get_state":
                 # Get current terminal state
                 connection_name = message.get("connection_name", "")
                 
                 try:
-                    terminal_state = ssh_terminals[client_id].get_terminal_state(connection_name)
+                    terminal_state = local_terminals[client_id].get_terminal_state(connection_name)
                     
                     await websocket.send_json({
                         "type": "terminal_state",
@@ -1117,7 +1115,7 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                     
                 except Exception as e:
                     await websocket.send_json({
-                        "type": "ssh_error",
+                        "type": "terminal_error",
                         "data": {
                             "connection_name": connection_name,
                             "error": str(e)
@@ -1126,14 +1124,14 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                     })
             
             elif message_type == "disconnect":
-                # Disconnect a specific SSH connection
+                # Disconnect a specific terminal connection
                 connection_name = message.get("connection_name", "")
                 
                 try:
-                    ssh_terminals[client_id].disconnect(connection_name)
+                    local_terminals[client_id].disconnect(connection_name)
                     
                     await websocket.send_json({
-                        "type": "ssh_disconnected",
+                        "type": "terminal_disconnected",
                         "data": {
                             "connection_name": connection_name,
                             "status": "disconnected"
@@ -1143,7 +1141,7 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                     
                 except Exception as e:
                     await websocket.send_json({
-                        "type": "ssh_error",
+                        "type": "terminal_error",
                         "data": {
                             "connection_name": connection_name,
                             "error": str(e)
@@ -1169,10 +1167,10 @@ async def websocket_ssh_terminal(websocket: WebSocket):
                 })
     
     except WebSocketDisconnect:
-        logger.info(f"WebSocket SSH client {client_id} disconnected")
+        logger.info(f"WebSocket terminal client {client_id} disconnected")
     except Exception as e:
         error_details = str(e) + "\n" + traceback.format_exc()
-        logger.error(f"WebSocket SSH error: {error_details}")
+        logger.error(f"WebSocket terminal error: {error_details}")
         try:
             await websocket.send_json({
                 "type": "error",
@@ -1183,23 +1181,23 @@ async def websocket_ssh_terminal(websocket: WebSocket):
         except:
             pass
     finally:
-        # Clean up all SSH connections for this client
-        if client_id in ssh_terminals:
+        # Clean up all terminal connections for this client
+        if client_id in local_terminals:
             try:
-                ssh_terminals[client_id].disconnect_all()
-                del ssh_terminals[client_id]
+                local_terminals[client_id].disconnect_all()
+                del local_terminals[client_id]
             except Exception as e:
-                logger.error(f"Error cleaning up SSH connections: {str(e)}")
+                logger.error(f"Error cleaning up terminal connections: {str(e)}")
 
-# Add cleanup of SSH terminals when the app shuts down
+# Add cleanup of terminal connections when the app shuts down
 @app.on_event("shutdown")
-async def shutdown_ssh_terminals():
-    for client_id, terminal in ssh_terminals.items():
+async def shutdown_terminals():
+    for client_id, terminal in local_terminals.items():
         try:
             terminal.disconnect_all()
         except Exception as e:
-            logger.error(f"Error disconnecting SSH terminal {client_id}: {str(e)}")
-    ssh_terminals.clear()
+            logger.error(f"Error disconnecting terminal {client_id}: {str(e)}")
+    local_terminals.clear()
 
 # Entry point for running the app
 if __name__ == "__main__":

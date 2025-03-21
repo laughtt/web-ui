@@ -1,8 +1,9 @@
 import asyncio
-import paramiko
+import subprocess
 import threading
 import re
 import time
+import os
 from typing import Dict, List, Optional, Callable, Any, Union, Tuple
 
 class TerminalState:
@@ -82,7 +83,6 @@ class TerminalState:
             # Cursor backward
             steps = int(params) if params else 1
             self.cursor_col = max(0, self.cursor_col - steps)
-        # Many more ANSI commands could be implemented
             
     def get_screen_state(self) -> str:
         """Get the current screen state as a string."""
@@ -93,37 +93,35 @@ class TerminalState:
         return self.history
 
 
-class SSHConnection:
-    """Handles a single SSH connection to a remote server."""
+class LocalConnection:
+    """Executes commands locally on the server."""
     
-    def __init__(self, host: str, username: str, 
-                 password: Optional[str] = None, 
-                 key_filename: Optional[str] = None,
-                 port: int = 22):
-        self.host = host
-        self.username = username
-        self.password = password
-        self.key_filename = key_filename
-        self.port = port
-        self.client = paramiko.SSHClient()
-        self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    def __init__(self, working_dir: Optional[str] = None):
+        self.working_dir = working_dir
         self.terminal_state = TerminalState()
-        self.shell = None
         self.connected = False
         self._output_callback = None
+        self._process = None
         self._reading_thread = None
         self._stop_reading = threading.Event()
         
     def connect(self) -> None:
-        """Establish SSH connection and start a shell."""
-        self.client.connect(
-            hostname=self.host,
-            port=self.port,
-            username=self.username,
-            password=self.password,
-            key_filename=self.key_filename
+        """Initialize the local connection."""
+        # Create a shell process
+        shell_command = 'bash' if os.name != 'nt' else 'cmd.exe'
+        
+        self._process = subprocess.Popen(
+            shell_command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            shell=False,
+            text=True,
+            bufsize=1,
+            cwd=self.working_dir,
+            universal_newlines=True
         )
-        self.shell = self.client.invoke_shell()
+        
         self.connected = True
         
         # Start background thread to read output
@@ -133,35 +131,51 @@ class SSHConnection:
         self._reading_thread.start()
         
     def disconnect(self) -> None:
-        """Close the SSH connection."""
+        """Close the local connection."""
         if self.connected:
             self._stop_reading.set()
             if self._reading_thread:
                 self._reading_thread.join(timeout=2)
-            if self.shell:
-                self.shell.close()
-            self.client.close()
+            if self._process:
+                try:
+                    self._process.terminate()
+                    self._process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    self._process.kill()
             self.connected = False
     
     def execute_command(self, command: str) -> None:
-        """Execute a command in the SSH shell."""
+        """Execute a command locally."""
         if not self.connected:
-            raise RuntimeError("Not connected to SSH server")
+            raise RuntimeError("Terminal not connected")
         
         # Send command with newline to execute
-        self.shell.send(command + "\n")
+        if self._process and self._process.stdin:
+            self._process.stdin.write(command + "\n")
+            self._process.stdin.flush()
     
     def _read_output(self) -> None:
-        """Background thread to read shell output."""
+        """Background thread to read process output."""
         while not self._stop_reading.is_set() and self.connected:
-            if self.shell and self.shell.recv_ready():
-                output = self.shell.recv(4096).decode('utf-8', errors='replace')
-                self.terminal_state.process_output(output)
-                
-                # Notify callback if set
-                if self._output_callback:
-                    self._output_callback(output)
-            time.sleep(0.1)
+            if self._process and self._process.stdout:
+                # Read one line (or as much as is available)
+                try:
+                    line = self._process.stdout.readline()
+                    if line:
+                        self.terminal_state.process_output(line)
+                        
+                        # Notify callback if set
+                        if self._output_callback:
+                            self._output_callback(line)
+                    else:
+                        # Process may have ended
+                        time.sleep(0.1)
+                except Exception as e:
+                    if self._output_callback:
+                        self._output_callback(f"Error reading output: {str(e)}\n")
+                    time.sleep(0.1)
+            else:
+                time.sleep(0.1)
     
     def set_output_callback(self, callback: Callable[[str], Any]) -> None:
         """Set callback function to be called when new output is available."""
@@ -176,40 +190,31 @@ class SSHConnection:
         return self.terminal_state.get_history()
 
 
-class SSHTerminal:
-    """Main SSH terminal manager class that handles multiple connections."""
+class LocalTerminal:
+    """Local terminal manager class that handles multiple terminal sessions."""
     
     def __init__(self):
-        self.connections: Dict[str, SSHConnection] = {}
+        self.connections: Dict[str, LocalConnection] = {}
     
-    def connect(self, name: str, host: str, username: str, 
-                password: Optional[str] = None,
-                key_filename: Optional[str] = None, 
-                port: int = 22) -> SSHConnection:
-        """Create and establish a new SSH connection."""
-        connection = SSHConnection(
-            host=host,
-            username=username,
-            password=password,
-            key_filename=key_filename,
-            port=port
-        )
+    def connect(self, name: str, working_dir: Optional[str] = None) -> LocalConnection:
+        """Create and establish a new local terminal connection."""
+        connection = LocalConnection(working_dir=working_dir)
         connection.connect()
         self.connections[name] = connection
         return connection
     
     def disconnect(self, name: str) -> None:
-        """Disconnect and remove a named SSH connection."""
+        """Disconnect and remove a named terminal connection."""
         if name in self.connections:
             self.connections[name].disconnect()
             del self.connections[name]
     
     def disconnect_all(self) -> None:
-        """Disconnect all SSH connections."""
+        """Disconnect all terminal connections."""
         for name in list(self.connections.keys()):
             self.disconnect(name)
     
-    def get_connection(self, name: str) -> SSHConnection:
+    def get_connection(self, name: str) -> LocalConnection:
         """Get a connection by name."""
         if name not in self.connections:
             raise KeyError(f"No connection named '{name}'")
@@ -222,69 +227,3 @@ class SSHTerminal:
     def get_terminal_state(self, name: str) -> str:
         """Get the terminal state for a specific connection."""
         return self.get_connection(name).get_terminal_state()
-
-
-# Add async support with asyncio
-class AsyncSSHTerminal:
-    """Asynchronous SSH terminal manager using asyncio."""
-    
-    def __init__(self):
-        self.connections = {}
-        self.tasks = {}
-    
-    async def connect(self, name: str, host: str, username: str,
-                     password: Optional[str] = None,
-                     key_filename: Optional[str] = None,
-                     port: int = 22) -> None:
-        """Asynchronously connect to an SSH server."""
-        # Using asyncssh for better async support
-        import asyncssh
-        
-        self.connections[name] = await asyncssh.connect(
-            host=host,
-            port=port,
-            username=username,
-            password=password,
-            client_keys=key_filename
-        )
-        
-        # Start a process to handle the shell
-        self.tasks[name] = asyncio.create_task(
-            self._handle_connection(name)
-        )
-    
-    async def _handle_connection(self, name: str) -> None:
-        """Manage an active connection."""
-        conn = self.connections[name]
-        process = await conn.start_shell()
-        
-        # Process stdin/stdout until closed
-        while not process.stdout.at_eof():
-            line = await process.stdout.readline()
-            # Process the output and update terminal state
-            # (We'd need to implement async terminal state handling)
-    
-    async def execute_command(self, name: str, command: str) -> str:
-        """Execute a command and return its output."""
-        conn = self.connections[name]
-        result = await conn.run(command)
-        return result.stdout
-    
-    async def disconnect(self, name: str) -> None:
-        """Disconnect a specific connection."""
-        if name in self.tasks:
-            self.tasks[name].cancel()
-            try:
-                await self.tasks[name]
-            except asyncio.CancelledError:
-                pass
-            del self.tasks[name]
-        
-        if name in self.connections:
-            self.connections[name].close()
-            del self.connections[name]
-    
-    async def disconnect_all(self) -> None:
-        """Disconnect all connections."""
-        for name in list(self.connections.keys()):
-            await self.disconnect(name)
