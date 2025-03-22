@@ -78,8 +78,8 @@ class CustomController(Controller):
         @self.registry.action('Write to file')
         def file_write(file_path: str, content: str, append: bool = False):
             try:
-                self.s3_handler.file_write(file_path, content, append)
-                return ActionResult(extracted_content=f"Successfully wrote to {file_path}", include_in_memory=True)
+                url = self.s3_handler.file_write(file_path, content, append)
+                return ActionResult(extracted_content=f"Successfully wrote to {url}", include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
         
@@ -102,8 +102,8 @@ class CustomController(Controller):
         @self.registry.action('Upload local file to s3')
         def upload_local_file_to_s3(file_path: str):
             try:
-                self.s3_handler.upload_local_file_to_s3(file_path)
-                return ActionResult(extracted_content=f"Successfully made {file_path} public", include_in_memory=True)
+                url = self.s3_handler.upload_local_file_to_s3(file_path)
+                return ActionResult(extracted_content=f"Successfully made {url} public", include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
         
