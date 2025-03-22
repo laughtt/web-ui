@@ -65,7 +65,7 @@ class CustomController(Controller):
                 if "google.com" in url:
                     return ActionResult(extracted_content="Google.com is not allowed")
                 result = scan_url_with_jina(url)
-                return ActionResult(extracted_content=result,include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=result,include_in_memory=True)
             except Exception as e:
                 return ActionResult(extracted_content=f"Error: {e}")
             
@@ -81,7 +81,7 @@ class CustomController(Controller):
         def file_write(file_path: str, content: str, append: bool = False):
             try:
                 url = self.s3_handler.file_write(file_path, content, append)
-                return ActionResult(extracted_content=f"Successfully wrote to file, final url: {url}", include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=f"Successfully wrote to file, final url: {url}", include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
         
@@ -89,7 +89,7 @@ class CustomController(Controller):
         def find_file(file_name: str, subfolder: Optional[str] = None):
             try:
                 files = self.s3_handler.find_file_by_name(file_name)
-                return ActionResult(extracted_content=f"Found files: {', '.join(files)}" , include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=f"Found files: {', '.join(files)}" , include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
         
@@ -97,7 +97,7 @@ class CustomController(Controller):
         def list_files(subfolder: Optional[str] = None):
             try:
                 files = self.s3_handler.list_files()
-                return ActionResult(extracted_content=f"Files: {', '.join(files)}" if files else "No files found", include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=f"Files: {', '.join(files)}" if files else "No files found", include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
             
@@ -105,7 +105,7 @@ class CustomController(Controller):
         def upload_local_file_to_s3(file_path: str):
             try:
                 url = self.s3_handler.upload_local_file_to_s3(file_path)
-                return ActionResult(extracted_content=f"Successfully made {url} public", include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=f"Successfully made {url} public", include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
         
@@ -113,7 +113,7 @@ class CustomController(Controller):
         def run_shell_command(command: str):
             try:
                 result = self.shell_tools.shell_exec(command)
-                return ActionResult(extracted_content=result, include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
         
@@ -129,7 +129,7 @@ class CustomController(Controller):
         def view_shell_process(process_id: str, timeout: float = 0.1):
             try:
                 result = self.shell_tools.shell_view(process_id, timeout)
-                return ActionResult(extracted_content=result, include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
 
@@ -137,7 +137,7 @@ class CustomController(Controller):
         def wait_for_shell_process(process_id: str, timeout: Optional[float] = None, check_interval: float = 0.5):
             try:
                 result = self.shell_tools.shell_wait(process_id, timeout, check_interval)
-                return ActionResult(extracted_content=result, include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
 
@@ -145,7 +145,7 @@ class CustomController(Controller):
         def write_to_shell_process(process_id: str, input_text: str):
             try:
                 result = self.shell_tools.shell_write_to_process(process_id, input_text)
-                return ActionResult(extracted_content=result, include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
 
@@ -153,7 +153,7 @@ class CustomController(Controller):
         def kill_shell_process(process_id: str, force: bool = False):
             try:
                 result = self.shell_tools.shell_kill_process(process_id, force)
-                return ActionResult(extracted_content=result, include_in_memory=True, is_done=True)
+                return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
         
