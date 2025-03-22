@@ -320,10 +320,11 @@ class CustomAgent(Agent):
             state = await self.browser_context.get_state()
             self._check_if_stopped_or_paused()
             
-            try:
-                logger.info(f"🧠 State: {str(state)} , last actions: {str(self._last_actions)} , last result: {str(self._last_result)} , step info: {str(step_info)} , use vision: {str(self.use_vision)}")
-            except Exception as e:
-                print(e)
+            
+
+            logger.info(f"🧠 State , last actions: {str(self._last_actions)} , last result: {str(self._last_result)} , step info: {str(step_info)} , use vision: {str(self.use_vision)}")
+            self.message_manager.add_state_message(state, self._last_actions, self._last_result, step_info,
+                                                   self.use_vision)
 
             # Run planner at specified intervals if planner is configured
             if self.planner_llm and self.n_steps % self.planning_interval == 0:
