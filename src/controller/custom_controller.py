@@ -37,6 +37,7 @@ class CustomController(Controller):
             prefix="llm-workspace",
             region="us-east-2"
         )
+        self.shell_tools = ShellTools()
 
     def _register_custom_actions(self):
         """Register all custom browser actions"""
@@ -109,7 +110,7 @@ class CustomController(Controller):
         @self.registry.action('Run shell command')
         def run_shell_command(command: str):
             try:
-                result = ShellTools.shell_exec(command)
+                result = self.shell_tools.shell_exec(command)
                 return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
@@ -117,7 +118,7 @@ class CustomController(Controller):
         @self.registry.action('Start interactive shell process')
         def start_shell_process(command: str, process_id: Optional[str] = None, cwd: Optional[str] = None):
             try:
-                result = ShellTools.shell_exec(command, process_id=process_id, cwd=cwd, interactive=True)
+                result = self.shell_tools.shell_exec(command, process_id=process_id, cwd=cwd, interactive=True)
                 return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
@@ -125,7 +126,7 @@ class CustomController(Controller):
         @self.registry.action('View shell process output')
         def view_shell_process(process_id: str, timeout: float = 0.1):
             try:
-                result = ShellTools.shell_view(process_id, timeout)
+                result = self.shell_tools.shell_view(process_id, timeout)
                 return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
@@ -133,7 +134,7 @@ class CustomController(Controller):
         @self.registry.action('Wait for shell process to complete')
         def wait_for_shell_process(process_id: str, timeout: Optional[float] = None, check_interval: float = 0.5):
             try:
-                result = ShellTools.shell_wait(process_id, timeout, check_interval)
+                result = self.shell_tools.shell_wait(process_id, timeout, check_interval)
                 return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
@@ -141,7 +142,7 @@ class CustomController(Controller):
         @self.registry.action('Send input to shell process')
         def write_to_shell_process(process_id: str, input_text: str):
             try:
-                result = ShellTools.shell_write_to_process(process_id, input_text)
+                result = self.shell_tools.shell_write_to_process(process_id, input_text)
                 return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
@@ -149,7 +150,7 @@ class CustomController(Controller):
         @self.registry.action('Terminate shell process')
         def kill_shell_process(process_id: str, force: bool = False):
             try:
-                result = ShellTools.shell_kill_process(process_id, force)
+                result = self.shell_tools.shell_kill_process(process_id, force)
                 return ActionResult(extracted_content=result, include_in_memory=True)
             except Exception as e:
                 return ActionResult(error=str(e))
