@@ -308,7 +308,7 @@ class S3FileHandler:
             self.logger.error(f"Error finding files with name {file_name}: {str(e)}")
             raise Exception(f"Error searching for files: {str(e)}")
     
-    def list_files(self, subfolder: str = None) -> List[str]:
+    def list_files(self, subfolder: Optional[str] = None) -> List[str]:
         """
         List all files in the S3 bucket/prefix or specific subfolder.
         
