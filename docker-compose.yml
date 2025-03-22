@@ -42,6 +42,9 @@ services:
       - CHROME_DEBUGGING_HOST=localhost
       - DBUS_STARTER_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
       - DBUS_SESSION_BUS_ADDRESS=unix:path=/var/run/dbus/system_bus_socket
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-2}
     volumes:
       - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
       - /tmp/.X11-unix:/tmp/.X11-unix
