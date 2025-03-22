@@ -94,7 +94,7 @@ class S3FileHandler:
                 self.logger.error(f"Error reading file {file_path}: {str(e)}")
                 raise Exception(f"Error reading file: {str(e)}")
     
-    def file_write(self, file_path: str, content: str, append: bool = False, public: Optional[bool] = None) -> bool:
+    def file_write(self, file_path: str, content: str, append: bool = False, public: Optional[bool] = None) -> str:
         """
         Write content to a file in S3, either creating a new file, overwriting, or appending.
         
@@ -105,7 +105,7 @@ class S3FileHandler:
             public: If True, make the file publicly accessible. If None, use the class default setting.
             
         Returns:
-            True if successful
+            The full S3 URL of the written file
             
         Raises:
             Exception: For S3 errors
@@ -139,7 +139,7 @@ class S3FileHandler:
             # Write to S3
             self.s3.put_object(**params)
             
-            return True
+            return self.get_public_url(file_path)
             
         except Exception as e:
             self.logger.error(f"Error writing to file {file_path}: {str(e)}")
@@ -157,7 +157,7 @@ class S3FileHandler:
             public: If True, make the file publicly accessible. If None, use the class default setting
             
         Returns:
-            The S3 key (path) where the file was uploaded
+            The full S3 URL of the uploaded file
             
         Raises:
             FileNotFoundError: If the local file doesn't exist
@@ -202,13 +202,13 @@ class S3FileHandler:
             )
             
             self.logger.info(f"Successfully uploaded {local_file_path} to s3://{self.bucket_name}/{full_path}")
-            return s3_file_path
+            return self.get_public_url(s3_file_path)
             
         except Exception as e:
             self.logger.error(f"Error uploading file {local_file_path}: {str(e)}")
             raise Exception(f"Error uploading file: {str(e)}")
     
-    def make_file_public(self, file_path: str) -> bool:
+    def make_file_public(self, file_path: str) -> str:
         """
         Make an existing file in S3 publicly accessible.
         
@@ -216,7 +216,7 @@ class S3FileHandler:
             file_path: Path to the file in S3
             
         Returns:
-            True if successful
+            The full S3 URL of the file made public
             
         Raises:
             FileNotFoundError: If the file doesn't exist
@@ -235,7 +235,7 @@ class S3FileHandler:
                 ACL='public-read'
             )
             
-            return True
+            return self.get_public_url(file_path)
             
         except ClientError as e:
             if e.response['Error']['Code'] == '404':

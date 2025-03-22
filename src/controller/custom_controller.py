@@ -50,7 +50,7 @@ class CustomController(Controller):
         @self.registry.action("Paste text from clipboard")
         async def paste_from_clipboard(browser: BrowserContext):
             text = pyperclip.paste()
-            # send text to browserP
+            # send text to browser
             page = await browser.get_current_page()
             await page.keyboard.type(text)
 

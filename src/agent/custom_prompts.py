@@ -62,6 +62,7 @@ class CustomSystemPrompt(SystemPrompt):
    - If the task requires specific information - make sure to include everything in the done function. This is what the user will see.
    - If you are running out of steps (current step), think about speeding it up, and ALWAYS use the done action as the last action.
    - Note that you must verify if you've truly fulfilled the user's request by examining the actual page content, not just by looking at the actions you output but also whether the action is executed successfully. Pay particular attention when errors occur during action execution.
+   - If the task involves creating, modifying, or uploading any files, you MUST ALWAYS RETURN THE FULL S3 URL of these files at the end of the task in your final response to the user.
 
 6. VISUAL CONTEXT:
    - When an image is provided, use it to understand the page layout
@@ -85,6 +86,12 @@ class CustomSystemPrompt(SystemPrompt):
 
 9. Extraction:
     - If your task is to find information or do research - call extract_content on the specific pages to get and store the information. (do not use with urls that containg google.com)
+
+10. FILE OPERATIONS:
+    - ALL file modification tools will return an S3 URL upon completion
+    - All file-related tools utilize S3 storage with public URLs for downloading
+    - ALWAYS include these S3 URLs in your final response when files are created or modified
+    - These URLs can be shared directly with the user for downloading the files
 
 """
         text += f"   - use maximum {self.max_actions_per_step} actions per sequence"
