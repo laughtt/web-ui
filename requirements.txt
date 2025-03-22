@@ -13,3 +13,4 @@ paramiko>=2.12.0    # For SSH connections
 cryptography>=38.0.0  # Required by paramiko for encryption
 bcrypt>=4.0.1       # Often used by paramiko for key handling
 pynacl>=1.5.0       # For SSH keys and authentication
+boto3==1.35.0
