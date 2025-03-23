@@ -64,12 +64,12 @@ app.add_middleware(
 # Pydantic models for request validation
 class AgentConfig(BaseModel):
     agent_type: str = "custom"
-    llm_provider: str = "anthropic"  # Default provider
-    llm_model_name: str = "claude-3-5-haiku-20241022"  # Default model
+    llm_provider: str = "openai"  # Default provider
+    llm_model_name: str = "o1"  # Default model
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.7
-    llm_base_url: Optional[str] = os.getenv("ANTHROPIC_ENDPOINT", None)  # Use environment value if exists
-    llm_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)  # Use environment value if exists
+    llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
+    llm_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)  # Use environment value if exists
     use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     keep_browser_open: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     headless: bool = True
@@ -80,7 +80,7 @@ class AgentConfig(BaseModel):
     save_agent_history_path: Optional[str] = "./tmp/agent_history"
     save_trace_path: Optional[str] = "./tmp/traces"
     enable_recording: bool = False
-    task: str = "Navigate to example.com and summarize the main content of the page."
+    task: str = "Navigate to example.com and summarize the main content of the page."   
     add_infos: Optional[str] = None
     max_steps: int = 100
     use_vision: bool = True
@@ -93,11 +93,11 @@ class ResearchConfig(BaseModel):
     max_search_iteration_input: int = 3
     max_query_per_iter_input: int = 3
     llm_provider: str = "openai"
-    llm_model_name: str = "gpt-4o"
+    llm_model_name: str = "o1"
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.5
-    llm_base_url: Optional[str] = os.getenv("ANTHROPIC_ENDPOINT", None)  # Use environment value if exists
-    llm_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)  # Use environment value if exists
+    llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
+    llm_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)  # Use environment value if exists
     use_vision: bool = True
     use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     headless: bool = True
