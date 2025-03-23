@@ -58,7 +58,7 @@ class CustomController(Controller):
 
             return ActionResult(extracted_content=text)
 
-        @self.registry.action("'Extract page content to get the pure markdown.")
+        @self.registry.action("Extract page content to get the pure markdown")
         async def extract_content(browser: BrowserContext):
             """Extract information from a webpage using the url, do not use google.com or any other search engine"""
             try:
