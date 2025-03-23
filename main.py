@@ -64,12 +64,12 @@ app.add_middleware(
 # Pydantic models for request validation
 class AgentConfig(BaseModel):
     agent_type: str = "custom"
-    llm_provider: str = "openai"  # Default provider
-    llm_model_name: str = "gpt-4o"  # Default model
+    llm_provider: str = "anthropic"  # Default provider
+    llm_model_name: str = "claude-3-5-haiku-20241022"  # Default model
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.7
-    llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
-    llm_api_key: Optional[str]
+    llm_base_url: Optional[str] = os.getenv("ANTHROPIC_ENDPOINT", None)  # Use environment value if exists
+    llm_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)  # Use environment value if exists
     use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     keep_browser_open: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     headless: bool = True
@@ -96,8 +96,8 @@ class ResearchConfig(BaseModel):
     llm_model_name: str = "gpt-4o"
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.5
-    llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
-    llm_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)  # Use environment value if exists
+    llm_base_url: Optional[str] = os.getenv("ANTHROPIC_ENDPOINT", None)  # Use environment value if exists
+    llm_api_key: Optional[str] = os.getenv("ANTHROPIC_API_KEY", None)  # Use environment value if exists
     use_vision: bool = True
     use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     headless: bool = True
@@ -137,7 +137,7 @@ async def root():
 async def run_agent(config: AgentConfig, background_tasks: BackgroundTasks):
     """Start a browser agent with the given configuration"""
     task_id = f"task_{os.urandom(4).hex()}"
-    config.llm_api_key = os.getenv("OPENAI_API_KEY", None)
+    config.llm_api_key = os.getenv("ANTHROPIC_API_KEY", None)
     
     # Store task in MongoDB
     await db.store_task(task_id, "agent", config.dict())
@@ -826,7 +826,7 @@ async def websocket_agent(websocket: WebSocket):
                     use_vision=config_settings.get("use_vision", True),
                     max_steps=config_settings.get("max_steps", 100),
                     max_actions_per_step=config_settings.get("max_actions_per_step", 10),
-                    llm_api_key=os.getenv("OPENAI_API_KEY", None)
+                    llm_api_key=os.getenv("ANTHROPIC_API_KEY", None)
                 )
                 
                 # Send acknowledgment

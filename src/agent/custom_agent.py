@@ -322,7 +322,7 @@ class CustomAgent(Agent):
             
             
 
-            #logger.info(f"🧠 State , last actions: {str(self._last_actions)} , last result: {str(self._last_result)} , step info: {str(step_info)} , use vision: {str(self.use_vision)}")
+            logger.info(f"🧠 State , last actions: {str(self._last_actions)} , last result: {str(self._last_result)} , step info: {str(step_info)} , use vision: {str(self.use_vision)}")
             self.message_manager.add_state_message(state, self._last_actions, self._last_result, step_info,
                                                    self.use_vision)
 

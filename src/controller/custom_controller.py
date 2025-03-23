@@ -57,6 +57,19 @@ class CustomController(Controller):
             await page.keyboard.type(text)
 
             return ActionResult(extracted_content=text)
+
+        @self.registry.action("Extract page content to get the pure markdown")
+        async def extract_content(browser: BrowserContext):
+            """Extract information from a webpage using the url, do not use google.com or any other search engine"""
+            try:
+                page = await browser.get_current_page()
+                url = page.url
+                result = scan_url_with_jina(url)
+                await page.go_back()
+                msg = f'Extracted page content:\n {result}\n'
+                return ActionResult(extracted_content=msg)
+            except Exception as e:
+                return ActionResult(extracted_content=f"Error: {e}")
             
         @self.registry.action('Read file')
         def file_read(file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None):

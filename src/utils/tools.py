@@ -17,7 +17,9 @@ def scan_url_with_jina(url):
     api_key = os.environ.get("JINA_API_KEY", "jina_10f654635d4f494cac364015f93a91e8HtmMOkmrYcH_SebdNsI3_lhyVJBx")
     
     headers = {
+        'Accept': 'text/event-stream',
         'Authorization': f'Bearer {api_key}',
+        'X-Engine': 'browser',
         'X-Return-Format': 'markdown'
     }
     
