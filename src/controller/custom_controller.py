@@ -57,17 +57,6 @@ class CustomController(Controller):
             await page.keyboard.type(text)
 
             return ActionResult(extracted_content=text)
-
-        @self.registry.action("Extract information from a webpage using the url, do not use google.com or any other search engine")
-        async def extract_content(url: str):
-            """Extract information from a webpage using the url, do not use google.com or any other search engine"""
-            try:
-                if "google.com" in url:
-                    return ActionResult(extracted_content="Google.com is not allowed",include_in_memory=True)
-                result = scan_url_with_jina(url)
-                return ActionResult(extracted_content=result,include_in_memory=True)
-            except Exception as e:
-                return ActionResult(extracted_content=f"Error: {e}",include_in_memory=True)
             
         @self.registry.action('Read file')
         def file_read(file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None):
