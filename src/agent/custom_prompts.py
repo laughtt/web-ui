@@ -31,17 +31,14 @@ class CustomSystemPrompt(SystemPrompt):
      ]
    }
 
-2. ACTIONS: You can specify multiple actions to be executed in sequence. 
+2. ACTIONS: You can specify one action at a time. 
 
    Common action sequences:
    - Form filling: [
        {"input_text": {"index": 1, "text": "username"}},
-       {"input_text": {"index": 2, "text": "password"}},
-       {"click_element": {"index": 3}}
      ]
    - Navigation and extraction: [
        {"go_to_url": {"url": "https://example.com"}},
-       {"extract_page_content": {}}
      ]
 
 
@@ -52,7 +49,7 @@ class CustomSystemPrompt(SystemPrompt):
 
 4. NAVIGATION & ERROR HANDLING:
    - If no suitable elements exist, use other functions to complete the task
-   - If stuck, try alternative approaches
+   - If stuck, try alternative approaches like going back to the previous page or using other tabs
    - Handle popups/cookies by accepting or closing them
    - Use scroll to find elements you are looking for
 
