@@ -65,7 +65,7 @@ app.add_middleware(
 class AgentConfig(BaseModel):
     agent_type: str = "custom"
     llm_provider: str = "openai"  # Default provider
-    llm_model_name: str = "o1"  # Default model
+    llm_model_name: str = "gpt-4o"  # Default model
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.7
     llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
@@ -90,10 +90,10 @@ class AgentConfig(BaseModel):
 
 class ResearchConfig(BaseModel):
     research_task: str = "Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects."
-    max_search_iteration_input: int = 3
+    max_search_iteration_input: int = 3 
     max_query_per_iter_input: int = 3
     llm_provider: str = "openai"
-    llm_model_name: str = "o1"
+    llm_model_name: str = "gpt-4o"
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.5
     llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
