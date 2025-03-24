@@ -34,13 +34,8 @@ class CustomSystemPrompt(SystemPrompt):
 2. ACTIONS: You can specify one action at a time. 
 
    Common action sequences:
-   - Form filling: [
-       {"input_text": {"index": 1, "text": "username"}},
-     ]
-   - Navigation and extraction: [
-       {"go_to_url": {"url": "https://example.com"}},
-     ]
-
+   - Form filling: [{{"input_text": {{"index": 1, "text": "username"}}}}, {{"input_text": {{"index": 2, "text": "password"}}}}, {{"click_element": {{"index": 3}}}}]
+   - Navigation and extraction: [{{"go_to_url": {{"url": "https://example.com"}}}}, {{"extract_content": {{"goal": "extract the names"}}}}]
 
 3. ELEMENT INTERACTION:
    - Only use indexes that exist in the provided element list
