@@ -21,7 +21,7 @@ from browser_use.controller.views import (
     SwitchTabAction,
 )
 import logging
-from src.utils.tools import scan_url_with_jina
+from src.utils.tools import scan_url_with_jina, screenshot_url_analysis
 from src.utils.shell import ShellTools
 logger = logging.getLogger(__name__)
 
@@ -60,14 +60,14 @@ class CustomController(Controller):
 
         @self.registry.action("Extract page content to get the pure markdown")
         async def extract_content(browser: BrowserContext):
-            """Extract information from a webpage using the url, do not use google.com or any other search engine"""
+            """Extract information from the current page, do not use google.com or any other search engine"""
+            
+
             try:
-                page = await browser.get_current_page()
-                url = page.url
-                result = scan_url_with_jina(url)
-                await page.go_back()
-                msg = f'Extracted page content:\n {result}\n'
-                return ActionResult(extracted_content=msg)
+                screenshot = await browser.take_screenshot()
+                analysis = await screenshot_url_analysis(screenshot)
+                msg = f'Extracted page content:\n {analysis}\n'
+                return ActionResult(extracted_content=msg , include_in_memory=True)
             except Exception as e:
                 return ActionResult(extracted_content=f"Error: {e}")
             
