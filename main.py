@@ -64,12 +64,12 @@ app.add_middleware(
 # Pydantic models for request validation
 class AgentConfig(BaseModel):
     agent_type: str = "custom"
-    llm_provider: str = "openai"  # Default provider
-    llm_model_name: str = "gpt-4.5-preview"  # Default model
+    llm_provider: str = "google"  # Default provider
+    llm_model_name: str = "gemini-2.5-pro-exp-03-25"  # Default model
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.7
-    llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
-    llm_api_key: Optional[str] = os.getenv("OPENAI_API_KEY", None)  # Use environment value if exists
+    llm_base_url: Optional[str] =  None # Use environment value if exists
+    llm_api_key: Optional[str] = os.getenv("GOOGLE_API_KEY", None)  # Use environment value if exists
     use_own_browser: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     keep_browser_open: bool = os.getenv("CHROME_PERSISTENT_SESSION", "false").lower() == "true"
     headless: bool = True
@@ -92,8 +92,8 @@ class ResearchConfig(BaseModel):
     research_task: str = "Compose a report on the use of Reinforcement Learning for training Large Language Models, encompassing its origins, current advancements, and future prospects."
     max_search_iteration_input: int = 3 
     max_query_per_iter_input: int = 3
-    llm_provider: str = "openai"
-    llm_model_name: str = "gpt-4.5-preview"
+    llm_provider: str = "google"
+    llm_model_name: str = "gemini-2.5-pro-exp-03-25"
     llm_num_ctx: int = 16384
     llm_temperature: float = 0.5
     llm_base_url: Optional[str] = os.getenv("OPENAI_ENDPOINT", None)  # Use environment value if exists
