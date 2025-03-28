@@ -157,8 +157,8 @@ class CustomController(Controller):
             if analysis is None:
                 return ActionResult(error="No chat context found", include_in_memory=True)
             await self.mongodb.save_user_chat_context(person_name=analysis.name_user_chat, screenshot=str(screenshot), context=analysis.context_user_chat)
-
-            return ActionResult(extracted_content=screenshot, include_in_memory=True)
+            logger.debug(f"Successfully saved chat user context: {analysis.context_user_chat}")
+            return ActionResult(extracted_content=f"Successfully saved chat user context: {analysis.context_user_chat}", include_in_memory=True)
             
         
         @self.registry.action('Get user chat context')
@@ -169,4 +169,7 @@ class CustomController(Controller):
             if analysis is None:
                 return ActionResult(error="No chat context found", include_in_memory=True)
             context = await self.mongodb.get_recent_chat_contexts(person_name=analysis.name_user_chat)
-            return ActionResult(extracted_content=context, include_in_memory=True)
+            msg = ""
+            for c in context:
+                msg = msg + f'{str(c["messages"])}\n' 
+            return ActionResult(extracted_content=msg, include_in_memory=True)

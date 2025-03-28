@@ -90,7 +90,7 @@ async def screenshot_url_analysis(screenshot: str) -> Optional[ChatContextSchema
         analysis = await CLIENT_GEMINI.chat.completions.create(
                 response_model=ChatContextSchema,
                 contents=[
-                    {"role": "system", "content": prompt},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": [prompt,image_bytes]}
                 ]
             )
