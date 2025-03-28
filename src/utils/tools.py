@@ -4,10 +4,27 @@ import os
 import asyncio
 import base64
 from typing import Optional
+import instructor
+import google.generativeai as genai
+from pydantic import BaseModel, Field
+
+
 from google import genai
 from google.genai import types
 
 logger = logging.getLogger(__name__)
+
+class ChatContextSchema(BaseModel):
+    name_user_chat: str = Field(description="The name of the user is talking with")
+    context_user_chat: str = Field(description="The context of the chat")
+    messages: list[str] = Field(description="The messages of the chat")
+
+
+client = instructor.from_gemini(
+    client=genai.GenerativeModel(
+        model_name="models/gemini-2.5-pro-exp-03-25"
+    ),
+    mode=instructor.Mode.GEMINI_JSON
 
 def scan_url_with_jina(url):
     """
@@ -46,7 +63,7 @@ def scan_url_with_jina(url):
         return f"Error: {error_msg}"
 
 
-async def screenshot_url_analysis(screenshot: str) -> Optional[str]:
+async def screenshot_url_analysis(screenshot: str) -> ChatContextSchema:
     """
     Analyze a screenshot of a webpage using Gemini's image analysis capabilities.
     
@@ -66,20 +83,28 @@ async def screenshot_url_analysis(screenshot: str) -> Optional[str]:
         # Convert base64 string to bytes
         image_bytes = base64.b64decode(screenshot)
         
+
+        system_prompt = """
+        You are SOCIAL MEDIA MANAGER, you are talking with a user, describe the context of the conversation in detail.
+        - Do not include the header, footer, sidebar, etc.
+        """
         # Create the prompt for image analysis
-        prompt = "Describe this webpage screenshot in detail. What is the content, all the text and the links"
-        
-        # Generate content using Gemini model
-        response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
-            contents=[
-                prompt,
-                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-            ]
-        )
+        prompt = """
+        Describe chat context from the screenshot, if there is no chat context, return "no chat context"
+        This can be usually a chat messages, return the context of the conversation , this will be saved to respond the user from the chat history.
+        - Do not include the header, footer, sidebar, etc.
+        """
+        analysis = await client.chat.completions.create(
+                response_model=ChatContextSchema,
+                contents=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": [prompt,image_bytes]}
+                ]
+            )
+
         logger.info(f"Screenshot analysis: {response.text}")
         # Return the analysis text
-        return response.text
+        return analysis
     except Exception as e:
         return f"Error analyzing screenshot: {str(e)}"
     

@@ -20,6 +20,7 @@ from browser_use.controller.views import (
     SendKeysAction,
     SwitchTabAction,
 )
+from src.utils.mongodb import db
 import logging
 from src.utils.tools import scan_url_with_jina, screenshot_url_analysis
 from src.utils.shell import ShellTools
@@ -40,6 +41,7 @@ class CustomController(Controller):
             region="us-east-2"
         )
         self.shell_tools = ShellTools()
+        self.mongodb = db
 
     def _register_custom_actions(self):
         """Register all custom browser actions"""
@@ -57,19 +59,6 @@ class CustomController(Controller):
             await page.keyboard.type(text)
 
             return ActionResult(extracted_content=text)
-
-        @self.registry.action("Extract page content to get the pure markdown")
-        async def extract_content(browser: BrowserContext):
-            """Extract information from the current page, do not use google.com or any other search engine"""
-            
-
-            try:
-                screenshot = await browser.take_screenshot()
-                analysis = await screenshot_url_analysis(screenshot)
-                msg = f'Extracted page content:\n {analysis}\n'
-                return ActionResult(extracted_content=msg , include_in_memory=True)
-            except Exception as e:
-                return ActionResult(extracted_content=f"Error: {e}")
             
         @self.registry.action('Read file')
         def file_read(file_path: str, start_line: Optional[int] = None, end_line: Optional[int] = None):
@@ -159,4 +148,22 @@ class CustomController(Controller):
             except Exception as e:
                 return ActionResult(error=str(e))
         
+        @self.registry.action('Collect chat user context')
+        async def collect_chat_user_context(browser: BrowserContext):
+            """Collect user chat information context from the brownser"""
+            screenshot = await browser.take_screenshot()
+            # save screenshot to mongodb
+            analysis = await screenshot_url_analysis(screenshot)
+
+            await self.mongodb.save_user_chat_context(person_name=analysis.name_user_chat, screenshot=str(screenshot), context=analysis.context_user_chat)
+
+            return ActionResult(extracted_content=screenshot, include_in_memory=True)
+            
         
+        @self.registry.action('Get user chat context')
+        async def get_user_chat_context(browser: BrowserContext):
+            """Get user chat context from the mongodb"""
+            screenshot = await browser.take_screenshot()
+            analysis = await screenshot_url_analysis(screenshot)
+            context = await self.mongodb.get_recent_chat_contexts(person_name=analysis.name_user_chat)
+            return ActionResult(extracted_content=context, include_in_memory=True)

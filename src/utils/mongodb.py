@@ -29,6 +29,8 @@ class MongoDB:
             self.db = self.client["brownser"]
             self.tasks_collection = self.db["tasks"]
             self.instances = self.db["instances"]
+            self.user_chat_context_collection = self.db["user_chat_context"]
+            logger.error(f"Failed to connect to MongoDB: {str(e)}")
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")
     
@@ -202,6 +204,82 @@ class MongoDB:
             return list(tasks)
         except Exception as e:
             logger.error(f"Error retrieving recent tasks: {str(e)}")
+            return []
+    
+    async def save_user_chat_context(self, person_name: str, screenshot: str, context: str):
+        """
+        Save user chat context to MongoDB
+        
+        Args:
+            person_name: Name of the person the user is talking to
+            screenshot: Screenshot data
+            context: Chat context data
+        """
+        try:
+            await self.user_chat_context_collection.insert_one({
+                "person_name": person_name,
+                "screenshot": screenshot,
+                "context": context,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            })
+            logger.info(f"Saved chat context for conversation with: {person_name}")
+        except Exception as e:
+            logger.error(f"Error saving chat context for conversation with {person_name}: {str(e)}")
+    
+    async def get_latest_chat_context(self, person_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve the most recent chat context for a specific person
+        
+        Args:
+            person_name: Name of the person to retrieve chat context for
+            
+        Returns:
+            dict: Latest chat context or None if not found
+        """
+        if not self.is_connected():
+            logger.warning(f"MongoDB not connected, cannot retrieve chat context for {person_name}")
+            return None
+            
+        try:
+            # Find the most recent chat context for this person
+            chat_context = await self.user_chat_context_collection.find_one(
+                {"person_name": person_name},
+                sort=[("created_at", -1)]  # Sort by creation time, newest first
+            )
+            return chat_context
+        except Exception as e:
+            logger.error(f"Error retrieving chat context for {person_name}: {str(e)}")
+            return None
+    
+    async def get_recent_chat_contexts(self, person_name: str, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Retrieve multiple recent chat contexts for a specific person
+        
+        Args:
+            person_name: Name of the person to retrieve chat contexts for
+            limit: Maximum number of chat contexts to return (default: 10)
+            
+        Returns:
+            list: List of recent chat contexts sorted by recency (newest first)
+        """
+        if not self.is_connected():
+            logger.warning(f"MongoDB not connected, cannot retrieve chat contexts for {person_name}")
+            return []
+            
+        try:
+            # Find recent chat contexts for this person
+            cursor = self.user_chat_context_collection.find(
+                {"person_name": person_name}
+            ).sort("created_at", -1).limit(limit)
+            
+            # Convert cursor to list
+            chat_contexts = await cursor.to_list(length=limit)
+            
+            logger.info(f"Retrieved {len(chat_contexts)} recent chat contexts for {person_name}")
+            return chat_contexts
+        except Exception as e:
+            logger.error(f"Error retrieving chat contexts for {person_name}: {str(e)}")
             return []
     
     def close(self):
