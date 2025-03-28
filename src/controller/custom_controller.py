@@ -154,7 +154,8 @@ class CustomController(Controller):
             screenshot = await browser.take_screenshot()
             # save screenshot to mongodb
             analysis = await screenshot_url_analysis(screenshot)
-
+            if analysis is None:
+                return ActionResult(error="No chat context found", include_in_memory=True)
             await self.mongodb.save_user_chat_context(person_name=analysis.name_user_chat, screenshot=str(screenshot), context=analysis.context_user_chat)
 
             return ActionResult(extracted_content=screenshot, include_in_memory=True)
@@ -165,5 +166,7 @@ class CustomController(Controller):
             """Get user chat context from the mongodb"""
             screenshot = await browser.take_screenshot()
             analysis = await screenshot_url_analysis(screenshot)
+            if analysis is None:
+                return ActionResult(error="No chat context found", include_in_memory=True)
             context = await self.mongodb.get_recent_chat_contexts(person_name=analysis.name_user_chat)
             return ActionResult(extracted_content=context, include_in_memory=True)

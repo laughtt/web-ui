@@ -87,7 +87,7 @@ class CustomSystemPrompt(SystemPrompt):
 11. USER CHAT CONTEXT:
     - If the user is talking with someone, you can use the user chat context to help you complete the task.
     - You can use the get_user_chat_context action to get the user chat context.
-    - You can use the save_user_chat_context action to save the user chat context.
+    - You can use the save_user_chat_context action to save the user chat context. To use it later.
 """
         text += f"   - use maximum {self.max_actions_per_step} actions per sequence"
         return text

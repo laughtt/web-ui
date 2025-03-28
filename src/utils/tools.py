@@ -9,9 +9,6 @@ import google.generativeai as genai
 from pydantic import BaseModel, Field
 
 
-from google import genai
-from google.genai import types
-
 logger = logging.getLogger(__name__)
 
 class ChatContextSchema(BaseModel):
@@ -62,7 +59,7 @@ def scan_url_with_jina(url):
         return f"Error: {error_msg}"
 
 
-async def screenshot_url_analysis(screenshot: str) -> ChatContextSchema:
+async def screenshot_url_analysis(screenshot: str) -> Optional[ChatContextSchema]:
     """
     Analyze a screenshot of a webpage using Gemini's image analysis capabilities.
     
@@ -104,6 +101,8 @@ async def screenshot_url_analysis(screenshot: str) -> ChatContextSchema:
         logger.info(f"Screenshot analysis: {response.text}")
         # Return the analysis text
         return analysis
+        
     except Exception as e:
-        return f"Error analyzing screenshot: {str(e)}"
+        logger.error(f"Error analyzing screenshot: {str(e)}")
+        return None
     
