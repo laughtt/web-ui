@@ -148,9 +148,9 @@ class CustomController(Controller):
             except Exception as e:
                 return ActionResult(error=str(e))
         
-        @self.registry.action('Collect chat user context')
-        async def collect_chat_user_context(browser: BrowserContext):
-            """Collect user chat information context from the brownser"""
+        @self.registry.action('save chat user context')
+        async def save_chat_user_context(browser: BrowserContext):
+            """save user chat information context from the brownser"""
             screenshot = await browser.take_screenshot()
             # save screenshot to mongodb
             analysis = await screenshot_url_analysis(screenshot)

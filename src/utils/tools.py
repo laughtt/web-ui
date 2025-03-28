@@ -24,8 +24,7 @@ client = instructor.from_gemini(
     client=genai.GenerativeModel(
         model_name="models/gemini-2.5-pro-exp-03-25"
     ),
-    mode=instructor.Mode.GEMINI_JSON
-
+    mode=instructor.Mode.GEMINI_JSON)
 def scan_url_with_jina(url):
     """
     Scan a URL using Jina AI's reader service and return the extracted content.

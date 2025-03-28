@@ -84,7 +84,10 @@ class CustomSystemPrompt(SystemPrompt):
     - All file-related tools utilize S3 storage with public URLs for downloading
     - ALWAYS include these S3 URLs in your final response when files are created or modified
     - These URLs can be shared directly with the user for downloading the files
-
+11. USER CHAT CONTEXT:
+    - If the user is talking with someone, you can use the user chat context to help you complete the task.
+    - You can use the get_user_chat_context action to get the user chat context.
+    - You can use the save_user_chat_context action to save the user chat context.
 """
         text += f"   - use maximum {self.max_actions_per_step} actions per sequence"
         return text
