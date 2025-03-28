@@ -17,11 +17,12 @@ class ChatContextSchema(BaseModel):
     messages: list[str] = Field(description="The messages of the chat")
 
 
-client = instructor.from_gemini(
+CLIENT_GEMINI = instructor.from_gemini(
     client=genai.GenerativeModel(
         model_name="models/gemini-2.5-pro-exp-03-25"
     ),
-    mode=instructor.Mode.GEMINI_JSON)
+    mode=instructor.Mode.GEMINI_JSON
+)
 def scan_url_with_jina(url):
     """
     Scan a URL using Jina AI's reader service and return the extracted content.
@@ -70,11 +71,7 @@ async def screenshot_url_analysis(screenshot: str) -> Optional[ChatContextSchema
         Analysis of the screenshot content
     """
     # Get API key from environment variable or use a placeholder
-    api_key = os.environ.get("GOOGLE_API_KEY", "")
-    
-    # Initialize Gemini client
-    client = genai.Client(api_key=api_key)
-    
+
     try:
         # Convert base64 string to bytes
         image_bytes = base64.b64decode(screenshot)
@@ -90,7 +87,7 @@ async def screenshot_url_analysis(screenshot: str) -> Optional[ChatContextSchema
         This can be usually a chat messages, return the context of the conversation , this will be saved to respond the user from the chat history.
         - Do not include the header, footer, sidebar, etc.
         """
-        analysis = await client.chat.completions.create(
+        analysis = await CLIENT_GEMINI.chat.completions.create(
                 response_model=ChatContextSchema,
                 contents=[
                     {"role": "system", "content": prompt},
@@ -98,7 +95,7 @@ async def screenshot_url_analysis(screenshot: str) -> Optional[ChatContextSchema
                 ]
             )
 
-        logger.info(f"Screenshot analysis: {response.text}")
+        logger.info(f"Screenshot analysis: {analysis}")
         # Return the analysis text
         return analysis
         
